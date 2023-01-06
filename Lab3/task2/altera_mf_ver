@@ -1,0 +1,7 @@
+# vsim -l altera_mf_ver tb_rtl_task2.rtl-vsim.rpt -c -coverage -do "run 1000000; coverage report -file tb_rtl_task2.stats.rpt; quit" tb_rtl_task2 
+# Start time: 14:20:38 on Oct 30,2022
+# ** Error (suppressible): (vsim-19) Failed to access library 'tb_rtl_task2.rtl-vsim' at "tb_rtl_task2.rtl-vsim".
+# No such file or directory. (errno = ENOENT)
+# Error loading design
+# End time: 14:20:38 on Oct 30,2022, Elapsed time: 0:00:00
+# Errors: 1, Warnings: 0

@@ -1,0 +1,680 @@
+Coverage Report by file with details
+
+=================================================================================
+=== File: circle.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                          164       155         9     94.51
+
+================================Statement Details================================
+
+Statement Coverage for file circle.sv --
+
+    1                                                module circle(input logic clk, input logic rst_n, input logic [2:0] colour,
+    2                                                              input logic [7:0] centre_x, input logic [6:0] centre_y, input logic [7:0] radius,
+    3                                                              input logic start, output logic done,
+    4                                                              output logic [7:0] vga_x, output logic [6:0] vga_y,
+    5                                                              output logic [2:0] vga_colour, output logic vga_plot);
+    6                                                	
+    7                                                	//enumeration for all possible states
+    8                                                	typedef enum { 
+    9                                                		CIRCLE_WAIT, 
+    10                                               		CIRCLE_CHECK_LOOP, 
+    11                                               		CIRCLE_DRAW_PIXEL1,
+    12                                               		CIRCLE_DRAW_PIXEL2,
+    13                                               		CIRCLE_DRAW_PIXEL3,
+    14                                               		CIRCLE_DRAW_PIXEL4, 
+    15                                               		CIRCLE_DRAW_PIXEL5,
+    16                                               		CIRCLE_DRAW_PIXEL6,
+    17                                               		CIRCLE_DRAW_PIXEL7,
+    18                                               		CIRCLE_DRAW_PIXEL8,
+    19                                               		CIRCLE_CRIT_CHECK,
+    20                                               		CIRCLE_CRIT_LE_ZERO,
+    21                                               		CIRCLE_CRIT_GT_ZERO,
+    22                                               		CIRCLE_DRAW_DONE
+    23                                               	} state_t;
+    24                                               
+    25                                               	state_t curr_state;
+    26                                               	state_t next_state;
+    27                                               
+    28                                               	logic [7:0] offset_x;
+    29                                               	logic [6:0] offset_y;
+    30                                               	logic signed [32:0] crit;
+    31                                               	logic signed [32:0] next_crit;
+    32                                               
+    33                                                   logic [8:0] vga_x_logic;
+    34                                                   logic [7:0] vga_y_logic;
+    35                                               
+    36                                               	logic update_offset_x;
+    37                                               	logic update_offset_y;
+    38                                               	logic update_crit;
+    39                                               	logic which_crit;
+    40                                               
+    41                                                   // STATE MACHINE CLOCK LOGIC BLOCK
+    42              1                       1444     	always @(posedge clk) begin
+    43                                               		if(!rst_n) begin
+    44              1                          4     			curr_state <= CIRCLE_WAIT;
+    45                                               		end	else begin
+    46              1                       1440     			curr_state <= next_state;
+    47                                               		end
+    48                                               	end
+    49                                               
+    50                                               	// offset_x register logic block
+    51              1                        117     	always @(posedge clk) begin
+    52                                               		if (!rst_n) begin
+    53              1                          4                 offset_x <= radius;
+    54                                                       end
+    55                                                       else if (update_offset_x) begin
+    56              1                         54                 offset_x <= offset_x - 1;
+    57                                               		end
+    58                                               	end
+    59                                               
+    60                                               	// offset_y register logic block
+    61              1                        269     	always @(posedge clk) begin
+    62                                               		if (!rst_n) begin
+    63              1                          4                 offset_y <= 0;
+    64                                                       end
+    65                                                       else if (update_offset_y) begin
+    66              1                        130                 offset_y <= offset_y + 1;
+    67                                               		end
+    68                                               	end
+    69                                               
+    70                                               	// crit register logic block
+    71              1                        269     	always @(posedge clk) begin
+    72                                               		if (!rst_n) begin
+    73              1                          4                 crit <= 1 - radius;
+    74                                                       end else if (update_crit) begin
+    75              1                        130                 crit <= next_crit;
+    76                                               		end
+    77                                               	end
+    78                                               
+    79                                                   // STATE MACHINE OUTPUT LOGIC BLOCK
+    80              1                       1456     	always_comb begin
+    81                                               		case (curr_state)
+    82                                               			CIRCLE_WAIT: begin
+    83              1                         10     				done = 0;
+    84              1                         10     				vga_plot = 0;
+    85              1                         10     				vga_x_logic = 0;
+    86              1                         10     				vga_y_logic = 0;
+    87              1                         10     				update_offset_x = 0;
+    88              1                         10     				update_offset_y = 0;
+    89              1                         10     				update_crit = 0;
+    90              1                         10     				which_crit = 0;
+    91                                               				if (start) begin
+    92              1                          4     					next_state = CIRCLE_CHECK_LOOP;
+    93                                               				end else begin
+    94              1                          6     					next_state = CIRCLE_WAIT;
+    95                                               				end
+    96                                               			end
+    97                                               			CIRCLE_CHECK_LOOP: begin
+    98              1                        134     				done = 0;
+    99              1                        134     				vga_plot = 0;
+    100             1                        134     				vga_x_logic = 0;
+    101             1                        134     				vga_y_logic = 0;
+    102             1                        134     				update_offset_x = 0;
+    103             1                        134     				update_offset_y = 0;
+    104             1                        134     				update_crit = 0;
+    105             1                        134     				which_crit = 0;
+    106                                              				if (offset_y <= offset_x) begin
+    107             1                        130     					next_state = CIRCLE_DRAW_PIXEL1;
+    108                                              				end else begin
+    109             1                          4     					next_state = CIRCLE_DRAW_DONE;
+    110                                              				end
+    111                                              			end
+    112                                              			CIRCLE_DRAW_PIXEL1: begin
+    113             1                        130     				done = 0;
+    114             1                        130     				update_offset_x = 0;
+    115             1                        130     				update_offset_y = 0;
+    116             1                        130     				update_crit = 0;
+    117             1                        130     				which_crit = 0;
+    118                                              
+    119             1                        130     				vga_x_logic = centre_x + offset_x;
+    120             1                        130     				vga_y_logic = centre_y + offset_y;
+    121             1                        130     				next_state = CIRCLE_DRAW_PIXEL2;
+    122                                              				
+    123                                              				// plot only if it is within bounds
+    124                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    125             1                         78     					vga_plot = 1;
+    126                                              				end else begin
+    127             1                         52     					vga_plot = 0;
+    128                                              				end
+    129                                              			end
+    130                                              			CIRCLE_DRAW_PIXEL2: begin
+    131             1                        130     				done = 0;
+    132             1                        130     				update_offset_x = 0;
+    133             1                        130     				update_offset_y = 0;
+    134             1                        130     				update_crit = 0;
+    135             1                        130     				which_crit = 0;
+    136                                              
+    137             1                        130     				vga_x_logic = centre_x + offset_y;
+    138             1                        130     				vga_y_logic = centre_y + offset_x;
+    139             1                        130     				next_state = CIRCLE_DRAW_PIXEL3;
+    140                                              				
+    141                                              				// plot only if it is within bounds
+    142                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    143             1                         58     					vga_plot = 1;
+    144                                              				end else begin
+    145             1                         72     					vga_plot = 0;
+    146                                              				end
+    147                                              			end
+    148                                              			CIRCLE_DRAW_PIXEL3: begin
+    149             1                        130     				done = 0;
+    150             1                        130     				update_offset_x = 0;
+    151             1                        130     				update_offset_y = 0;
+    152             1                        130     				update_crit = 0;
+    153             1                        130     				which_crit = 0;
+    154                                              
+    155             1                        130     				vga_x_logic = centre_x - offset_x;
+    156             1                        130     				vga_y_logic = centre_y + offset_y;
+    157             1                        130     				next_state = CIRCLE_DRAW_PIXEL4;
+    158                                              				
+    159                                              				// plot only if it is within bounds
+    160                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    161             1                         98     					vga_plot = 1;
+    162                                              				end else begin
+    163             1                         32     					vga_plot = 0;
+    164                                              				end
+    165                                              			end
+    166                                              			CIRCLE_DRAW_PIXEL4: begin
+    167             1                        130     				done = 0;
+    168             1                        130     				update_offset_x = 0;
+    169             1                        130     				update_offset_y = 0;
+    170             1                        130     				update_crit = 0;
+    171             1                        130     				which_crit = 0;
+    172                                              				
+    173             1                        130     				vga_x_logic = centre_x - offset_y;
+    174             1                        130     				vga_y_logic = centre_y + offset_x;
+    175             1                        130     				next_state = CIRCLE_DRAW_PIXEL5;
+    176                                              				
+    177                                              				// plot only if it is within bounds
+    178                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    179             1                         58     					vga_plot = 1;
+    180                                              				end else begin
+    181             1                         72     					vga_plot = 0;
+    182                                              				end
+    183                                              			end
+    184                                              			CIRCLE_DRAW_PIXEL5: begin
+    185             1                        130     				done = 0;
+    186             1                        130     				update_offset_x = 0;
+    187             1                        130     				update_offset_y = 0;
+    188             1                        130     				update_crit = 0;
+    189             1                        130     				which_crit = 0;
+    190                                              				
+    191             1                        130     				vga_x_logic = centre_x - offset_x;
+    192             1                        130     				vga_y_logic = centre_y - offset_y;
+    193             1                        130     				next_state = CIRCLE_DRAW_PIXEL6;
+    194                                              				
+    195                                              				// plot only if it is within bounds
+    196                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    197             1                        122     					vga_plot = 1;
+    198                                              				end else begin
+    199             1                          8     					vga_plot = 0;
+    200                                              				end
+    201                                              			end
+    202                                              			CIRCLE_DRAW_PIXEL6: begin
+    203             1                        130     				done = 0;
+    204             1                        130     				update_offset_x = 0;
+    205             1                        130     				update_offset_y = 0;
+    206             1                        130     				update_crit = 0;
+    207             1                        130     				which_crit = 0;
+    208                                              				
+    209             1                        130     				vga_x_logic = centre_x - offset_y;
+    210             1                        130     				vga_y_logic = centre_y - offset_x;
+    211             1                        130     				next_state = CIRCLE_DRAW_PIXEL7;
+    212                                              				
+    213                                              				// plot only if it is within bounds
+    214                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    215             1                        101     					vga_plot = 1;
+    216                                              				end else begin
+    217             1                         29     					vga_plot = 0;
+    218                                              				end
+    219                                              			end
+    220                                              			CIRCLE_DRAW_PIXEL7: begin
+    221             1                        130     				done = 0;
+    222             1                        130     				update_offset_x = 0;
+    223             1                        130     				update_offset_y = 0;
+    224             1                        130     				update_crit = 0;
+    225             1                        130     				which_crit = 0;
+    226                                              				
+    227             1                        130     				vga_x_logic = centre_x + offset_x;
+    228             1                        130     				vga_y_logic = centre_y - offset_y;
+    229             1                        130     				next_state = CIRCLE_DRAW_PIXEL8;
+    230                                              				
+    231                                              				// plot only if it is within bounds
+    232                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    233             1                         79     					vga_plot = 1;
+    234                                              				end else begin
+    235             1                         51     					vga_plot = 0;
+    236                                              				end
+    237                                              			end
+    238                                              			CIRCLE_DRAW_PIXEL8: begin
+    239             1                        130     				done = 0;
+    240             1                        130     				update_offset_x = 0;
+    241             1                        130     				update_offset_y = 0;
+    242             1                        130     				update_crit = 0;
+    243             1                        130     				which_crit = 0;
+    244                                              				
+    245             1                        130     				vga_x_logic = centre_x + offset_y;
+    246             1                        130     				vga_y_logic = centre_y - offset_x;
+    247             1                        130     				next_state = CIRCLE_CRIT_CHECK;
+    248                                              				
+    249                                              				// plot only if it is within bounds
+    250                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    251             1                         78     					vga_plot = 1;
+    252                                              				end else begin
+    253             1                         52     					vga_plot = 0;
+    254                                              				end
+    255                                              			end
+    256                                              			CIRCLE_CRIT_CHECK: begin
+    257             1                        130     				vga_plot = 0;
+    258             1                        130     				done = 0;
+    259             1                        130     				vga_x_logic = 0;
+    260             1                        130     				vga_y_logic = 0;
+    261             1                        130     				update_offset_x = 0;
+    262             1                        130     				update_offset_y = 1;
+    263             1                        130     				update_crit = 0;
+    264             1                        130     				which_crit = 0;
+    265                                              
+    266                                              				if (crit <= 0) begin
+    267             1                         76     					next_state = CIRCLE_CRIT_LE_ZERO;
+    268                                              				end else begin
+    269             1                         54                 		next_state = CIRCLE_CRIT_GT_ZERO;
+    270                                              				end
+    271                                              			end
+    272                                              			CIRCLE_CRIT_LE_ZERO: begin
+    273             1                         76     				vga_plot = 0;
+    274             1                         76     				done = 0;
+    275             1                         76     				vga_x_logic = 0;
+    276             1                         76     				vga_y_logic = 0;
+    277             1                         76     				update_offset_x = 0;
+    278             1                         76     				update_offset_y = 0;
+    279             1                         76     				update_crit = 1;
+    280             1                         76     				which_crit = 0;
+    281                                              
+    282             1                         76     				next_state <= CIRCLE_CHECK_LOOP;
+    283                                              			end
+    284                                              			CIRCLE_CRIT_GT_ZERO: begin
+    285             1                         54     				vga_plot = 0;
+    286             1                         54     				done = 0;
+    287             1                         54     				vga_x_logic = 0;
+    288             1                         54     				vga_y_logic = 0;
+    289             1                         54     				update_offset_x = 1;
+    290             1                         54     				update_offset_y = 0;
+    291             1                         54     				update_crit = 1;
+    292             1                         54     				which_crit = 1;
+    293             1                         54     				next_state <= CIRCLE_CHECK_LOOP;
+    294                                              			end
+    295                                              			CIRCLE_DRAW_DONE: begin
+    296             1                         12     				done = 1;
+    297             1                         12     				vga_plot = 0;
+    298             1                         12     				vga_x_logic = 0;
+    299             1                         12     				vga_y_logic = 0;
+    300             1                         12     				update_offset_x = 0;
+    301             1                         12     				update_offset_y = 0;
+    302             1                         12     				update_crit = 0;
+    303             1                         12     				which_crit = 0;
+    304                                              				if (start) begin
+    305             1                          5     					next_state = CIRCLE_DRAW_DONE;
+    306                                              				end else begin
+    307             1                          7     					next_state = CIRCLE_WAIT;
+    308                                              				end
+    309                                              			end
+    310                                              			default begin
+    311                                              				//panic
+    312             1                    ***0***     				done = 0;
+    313             1                    ***0***     				vga_plot = 0;
+    314             1                    ***0***     				vga_x_logic = 119;
+    315             1                    ***0***     				vga_y_logic = 159;
+    316             1                    ***0***     				update_offset_x = 0;
+    317             1                    ***0***     				update_offset_y = 0;
+    318             1                    ***0***     				update_crit = 0;
+    319             1                    ***0***     				which_crit = 0;
+    320             1                    ***0***     				next_state = CIRCLE_WAIT;
+    321                                              			end
+    322                                              		endcase
+    323                                              
+    324             1                       1456     		vga_colour = colour;
+    325             1                       1456     		vga_x = vga_x_logic[7:0];
+    326             1                       1456             vga_y = vga_y_logic[6:0];
+    327             1                       1456     		next_crit = which_crit ? crit + (2 * (offset_y - offset_x)) + 1 : crit + (2 * offset_y) + 1;
+    328                                              	end
+    329                                              	 
+    330                                              endmodule
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                        52        51         1     98.07
+
+================================Branch Details================================
+
+Branch Coverage for file circle.sv --
+
+------------------------------------IF Branch------------------------------------
+    43                                      1444     Count coming in to IF
+    43              1                          4     		if(!rst_n) begin
+    45              1                       1440     		end	else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    52                                       117     Count coming in to IF
+    52              1                          4     		if (!rst_n) begin
+    55              1                         54             else if (update_offset_x) begin
+                                              59     All False Count
+Branch totals: 3 hits of 3 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    62                                       269     Count coming in to IF
+    62              1                          4     		if (!rst_n) begin
+    65              1                        130             else if (update_offset_y) begin
+                                             135     All False Count
+Branch totals: 3 hits of 3 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    72                                       269     Count coming in to IF
+    72              1                          4     		if (!rst_n) begin
+    74              1                        130             end else if (update_crit) begin
+                                             135     All False Count
+Branch totals: 3 hits of 3 branches = 100.00%
+
+------------------------------------CASE Branch------------------------------------
+    81                                      1456     Count coming in to CASE
+    82              1                         10     			CIRCLE_WAIT: begin
+    97              1                        134     			CIRCLE_CHECK_LOOP: begin
+    112             1                        130     			CIRCLE_DRAW_PIXEL1: begin
+    130             1                        130     			CIRCLE_DRAW_PIXEL2: begin
+    148             1                        130     			CIRCLE_DRAW_PIXEL3: begin
+    166             1                        130     			CIRCLE_DRAW_PIXEL4: begin
+    184             1                        130     			CIRCLE_DRAW_PIXEL5: begin
+    202             1                        130     			CIRCLE_DRAW_PIXEL6: begin
+    220             1                        130     			CIRCLE_DRAW_PIXEL7: begin
+    238             1                        130     			CIRCLE_DRAW_PIXEL8: begin
+    256             1                        130     			CIRCLE_CRIT_CHECK: begin
+    272             1                         76     			CIRCLE_CRIT_LE_ZERO: begin
+    284             1                         54     			CIRCLE_CRIT_GT_ZERO: begin
+    295             1                         12     			CIRCLE_DRAW_DONE: begin
+    310             1                    ***0***     			default begin
+Branch totals: 14 hits of 15 branches = 93.33%
+
+------------------------------------IF Branch------------------------------------
+    91                                        10     Count coming in to IF
+    91              1                          4     				if (start) begin
+    93              1                          6     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    106                                      134     Count coming in to IF
+    106             1                        130     				if (offset_y <= offset_x) begin
+    108             1                          4     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    124                                      130     Count coming in to IF
+    124             1                         78     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    126             1                         52     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    142                                      130     Count coming in to IF
+    142             1                         58     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    144             1                         72     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    160                                      130     Count coming in to IF
+    160             1                         98     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    162             1                         32     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    178                                      130     Count coming in to IF
+    178             1                         58     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    180             1                         72     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    196                                      130     Count coming in to IF
+    196             1                        122     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    198             1                          8     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    214                                      130     Count coming in to IF
+    214             1                        101     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    216             1                         29     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    232                                      130     Count coming in to IF
+    232             1                         79     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    234             1                         51     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    250                                      130     Count coming in to IF
+    250             1                         78     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    252             1                         52     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    266                                      130     Count coming in to IF
+    266             1                         76     				if (crit <= 0) begin
+    268             1                         54     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    304                                       12     Count coming in to IF
+    304             1                          5     				if (start) begin
+    306             1                          7     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    327                                     1456     Count coming in to IF
+    327             1                         54     		next_crit = which_crit ? crit + (2 * (offset_y - offset_x)) + 1 : crit + (2 * offset_y) + 1;
+    327             2                       1402     		next_crit = which_crit ? crit + (2 * (offset_y - offset_x)) + 1 : crit + (2 * offset_y) + 1;
+Branch totals: 2 hits of 2 branches = 100.00%
+
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                    272       263         9     96.69
+
+================================Toggle Details================================
+
+Toggle Coverage for File circle.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+         25                             curr_state               ENUM type       Value       Count 
+         26                             next_state               ENUM type       Value       Count 
+         28                            offset_x[7]           0           0                                0.00 
+         28                            offset_x[6]           0           0                                0.00 
+         29                            offset_y[6]           0           0                                0.00 
+         29                            offset_y[5]           0           1                               50.00 
+         33                         vga_x_logic[8]           0           0                                0.00 
+
+Total Node Count     =        150 
+Toggled Node Count   =        145 
+Untoggled Node Count =          5 
+
+Toggle Coverage      =      96.69% (263 of 272 bins)
+
+=================================================================================
+=== File: tb_circle.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           91        91         0    100.00
+
+================================Statement Details================================
+
+Statement Coverage for file tb_circle.sv --
+
+    1                                                module tb_circle();
+    2                                                    logic clk = 0;
+    3                                                    logic rst_n;
+    4                                                    logic start;
+    5                                                    logic [2:0] colour;
+    6                                                    logic [7:0] centre_x;
+    7                                                    logic [6:0] centre_y;
+    8                                                    logic [7:0] radius;
+    9                                                    
+    10                                                   logic done;
+    11                                                   logic [7:0] vga_x;
+    12                                                   logic [6:0] vga_y;
+    13                                                   logic [2:0] vga_colour;
+    14                                                   logic vga_plot;
+    15                                               
+    16                                                   //module instantiation
+    17                                                   circle dut (.*);
+    18                                               
+    19              1                      20001         always #5 clk = ~clk;  // Create clock with period=10
+    19              2                      20000     
+    20                                               
+    21                                                   initial begin
+    22                                                       // Default Case test
+    23              1                          1             colour = 3'b000;
+    24              1                          1             centre_x = 80;
+    25              1                          1             centre_y = 60;
+    26              1                          1             radius = 40;
+    27              1                          1             start = 0;
+    28              1                          1             rst_n = 0; 
+    29              1                          1             #10;
+    30              1                          1             $display("Testing default case");
+    31              1                          1             rst_n = 1;
+    32              1                          1             start = 1;
+    33              1                          1             wait(done == 1); //I would add a $stop here to inspect waveforms but that messes with the code coverage simulation
+    34                                                       
+    35                                                       // Case where circle overlaps with left edge
+    36              1                          1             colour = 3'b001;
+    37              1                          1             centre_x = 30;
+    38              1                          1             centre_y = 60;
+    39              1                          1             radius = 40;
+    40              1                          1             start = 0;
+    41              1                          1             start = 0;
+    42              1                          1             rst_n = 0; 
+    43              1                          1             #10;
+    44              1                          1             $display("Testing overlap left case");
+    45              1                          1             rst_n = 1;
+    46              1                          1             start = 1;
+    47              1                          1             wait(done == 1); //I would add a $stop here to inspect waveforms but that messes with the code coverage simulation
+    48                                                       
+    49                                                       // Case where circle overlaps with top edge
+    50              1                          1             colour = 3'b010;
+    51              1                          1             centre_x = 80;
+    52              1                          1             centre_y = 20;
+    53              1                          1             radius = 40;
+    54              1                          1             start = 0;
+    55              1                          1             rst_n = 0; 
+    56              1                          1             #10;
+    57              1                          1             $display("Testing overlap top case");
+    58              1                          1             rst_n = 1;
+    59              1                          1             start = 1;
+    60              1                          1             wait(done == 1); //I would add a $stop here to inspect waveforms but that messes with the code coverage simulation
+    61                                                       
+    62                                                       // Case where circle overlaps with right edge
+    63              1                          1             colour = 3'b011;
+    64              1                          1             centre_x = 140;
+    65              1                          1             centre_y = 60;
+    66              1                          1             radius = 40;
+    67              1                          1             start = 0;
+    68              1                          1             rst_n = 0; 
+    69              1                          1             #10;
+    70              1                          1             $display("Testing overlap right case");
+    71              1                          1             rst_n = 1;
+    72              1                          1             start = 1;
+    73              1                          1             wait(done == 1); //I would add a $stop here to inspect waveforms but that messes with the code coverage simulation
+    74                                                       
+    75                                                       // Case where circle overlaps with bottom edge
+    76              1                          1             colour = 3'b100;
+    77              1                          1             centre_x = 80;
+    78              1                          1             centre_y = 100;
+    79              1                          1             radius = 40;
+    80              1                          1             start = 0;
+    81              1                          1             rst_n = 0; 
+    82              1                          1             #10;
+    83              1                          1             $display("Testing overlap bottom case");
+    84              1                          1             rst_n = 1;
+    85              1                          1             start = 1;
+    86              1                          1             wait(done == 1); //I would add a $stop here to inspect waveforms but that messes with the code coverage simulation
+    87                                                       
+    88                                                       // Case where circle overlaps with top-left edge
+    89              1                          1             colour = 3'b101;
+    90              1                          1             centre_x = 20;
+    91              1                          1             centre_y = 20;
+    92              1                          1             radius = 40;
+    93              1                          1             start = 0;
+    94              1                          1             rst_n = 0; 
+    95              1                          1             #10;
+    96              1                          1             $display("Testing overlap top-left case");
+    97              1                          1             rst_n = 1;
+    98              1                          1             start = 1;
+    99              1                          1             wait(done == 1); //I would add a $stop here to inspect waveforms but that messes with the code coverage simulation
+    100                                                      
+    101                                                      // Case where circle is very large and only touches top and bottom edges
+    102             1                          1             colour = 3'b110;
+    103             1                          1             centre_x = 140;
+    104             1                          1             centre_y = 100;
+    105             1                          1             radius = 60;
+    106             1                          1             start = 0;
+    107             1                          1             rst_n = 0; 
+    108             1                          1             #10;
+    109             1                          1             $display("Testing large case");
+    110             1                          1             rst_n = 1;
+    111             1                          1             start = 1;
+    112             1                          1             wait(done == 1); //I would add a $stop here to inspect waveforms but that messes with the code coverage simulation
+    113                                                      
+    114                                                      // Case where circle is too big
+    115             1                          1             colour = 3'b000;
+    116             1                          1             centre_x = 80;
+    117             1                          1             centre_y = 60;
+    118             1                          1             radius = 120;
+    119             1                          1             start = 0;
+    120             1                          1             rst_n = 0; 
+    121             1                          1             #10;
+    122             1                          1             $display("Testing oversized case");
+    123             1                          1             rst_n = 1;
+    124             1                          1             start = 1;
+    125             1                          1             wait(done == 1); //I would add a $stop here to inspect waveforms but that messes with the code coverage simulation
+    126                                                  end
+    127                                              
+    128                                              endmodule: tb_circle
+    129                                              
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                     98        76        22     77.55
+
+================================Toggle Details================================
+
+Toggle Coverage for File tb_circle.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+          6                            centre_x[5]           0           0                                0.00 
+          6                            centre_x[0]           0           0                                0.00 
+          7                            centre_y[2]           0           0                                0.00 
+          7                            centre_y[1]           0           0                                0.00 
+          7                            centre_y[0]           0           0                                0.00 
+          8                              radius[7]           0           0                                0.00 
+          8                              radius[6]           0           1                               50.00 
+          8                              radius[5]           0           0                                0.00 
+          8                              radius[4]           0           1                               50.00 
+          8                              radius[3]           0           0                                0.00 
+          8                              radius[1]           0           0                                0.00 
+          8                              radius[0]           0           0                                0.00 
+
+Total Node Count     =         49 
+Toggled Node Count   =         37 
+Untoggled Node Count =         12 
+
+Toggle Coverage      =      77.55% (76 of 98 bins)
+
+
+Total Coverage By File (code coverage only, filtered view): 95.38%
+

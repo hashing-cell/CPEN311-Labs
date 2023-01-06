@@ -1,0 +1,1832 @@
+Coverage Report by file with details
+
+=================================================================================
+=== File: circle.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                          228       200        28     87.71
+
+================================Statement Details================================
+
+Statement Coverage for file circle.sv --
+
+    1                                                `define TOP_CORNER 2'b11
+    2                                                `define BL_CORNER 2'b01
+    3                                                `define BR_CORNER 2'b10
+    4                                                
+    5                                                module circle(input logic clk, input logic rst_n, input logic [2:0] colour,
+    6                                                              input logic [7:0] centre_x, input logic [6:0] centre_y, input logic [7:0] radius,
+    7                                                			  input logic [8:0] bounds_x, input logic [8:0] bounds_y, 
+    8                                                			  input logic [8:0] bounds2_x, input logic [8:0] bounds2_y, 
+    9                                                			  input logic [1:0] which_corner,
+    10                                                             input logic start, output logic done,
+    11                                                             output logic [7:0] vga_x, output logic [6:0] vga_y,
+    12                                                             output logic [2:0] vga_colour, output logic vga_plot);
+    13                                               	
+    14                                               	//enumeration for all possible states
+    15                                               	typedef enum { 
+    16                                               		CIRCLE_WAIT, 
+    17                                               		CIRCLE_CHECK_LOOP, 
+    18                                               		CIRCLE_DRAW_PIXEL1,
+    19                                               		CIRCLE_DRAW_PIXEL2,
+    20                                               		CIRCLE_DRAW_PIXEL3,
+    21                                               		CIRCLE_DRAW_PIXEL4, 
+    22                                               		CIRCLE_DRAW_PIXEL5,
+    23                                               		CIRCLE_DRAW_PIXEL6,
+    24                                               		CIRCLE_DRAW_PIXEL7,
+    25                                               		CIRCLE_DRAW_PIXEL8,
+    26                                               		CIRCLE_CRIT_CHECK,
+    27                                               		CIRCLE_CRIT_LE_ZERO,
+    28                                               		CIRCLE_CRIT_GT_ZERO,
+    29                                               		CIRCLE_DRAW_DONE
+    30                                               	} state_t;
+    31                                               
+    32                                               	state_t curr_state;
+    33                                               	state_t next_state;
+    34                                               
+    35                                               	logic [7:0] offset_x;
+    36                                               	logic [6:0] offset_y;
+    37                                               	logic signed [32:0] crit;
+    38                                               	logic signed [32:0] next_crit;
+    39                                               
+    40                                                   logic [8:0] vga_x_logic;
+    41                                                   logic [7:0] vga_y_logic;
+    42                                               
+    43                                               	logic update_offset_x;
+    44                                               	logic update_offset_y;
+    45                                               	logic update_crit;
+    46                                               	logic which_crit;
+    47                                               
+    48                                                   // STATE MACHINE CLOCK LOGIC BLOCK
+    49              1                       3319     	always @(posedge clk) begin
+    50                                               		if(!rst_n) begin
+    51              1                          7     			curr_state <= CIRCLE_WAIT;
+    52                                               		end	else begin
+    53              1                       3312     			curr_state <= next_state;
+    54                                               		end
+    55                                               	end
+    56                                               
+    57                                               	// offset_x register logic block
+    58              1                        275     	always @(posedge clk) begin
+    59                                               		if (!rst_n) begin
+    60              1                         17                 offset_x <= radius;
+    61                                                       end
+    62                                                       else if (update_offset_x) begin
+    63              1                        126                 offset_x <= offset_x - 1;
+    64                                               		end
+    65                                               	end
+    66                                               
+    67                                               	// offset_y register logic block
+    68              1                        620     	always @(posedge clk) begin
+    69                                               		if (!rst_n) begin
+    70              1                         14                 offset_y <= 0;
+    71                                                       end
+    72                                                       else if (update_offset_y) begin
+    73              1                        300                 offset_y <= offset_y + 1;
+    74                                               		end
+    75                                               	end
+    76                                               
+    77                                               	// crit register logic block
+    78              1                        623     	always @(posedge clk) begin
+    79                                               		if (!rst_n) begin
+    80              1                         17                 crit <= 1 - radius;
+    81                                                       end else if (update_crit) begin
+    82              1                        300                 crit <= next_crit;
+    83                                               		end
+    84                                               	end
+    85                                               
+    86                                                   // STATE MACHINE OUTPUT LOGIC BLOCK
+    87              1                       3338     	always_comb begin
+    88                                               		case (curr_state)
+    89                                               			CIRCLE_WAIT: begin
+    90              1                         20     				done = 0;
+    91              1                         20     				vga_plot = 0;
+    92              1                         20     				vga_x_logic = 0;
+    93              1                         20     				vga_y_logic = 0;
+    94              1                         20     				update_offset_x = 0;
+    95              1                         20     				update_offset_y = 0;
+    96              1                         20     				update_crit = 0;
+    97              1                         20     				which_crit = 0;
+    98                                               				if (start) begin
+    99              1                          6     					next_state = CIRCLE_CHECK_LOOP;
+    100                                              				end else begin
+    101             1                         14     					next_state = CIRCLE_WAIT;
+    102                                              				end
+    103                                              			end
+    104                                              			CIRCLE_CHECK_LOOP: begin
+    105             1                        306     				done = 0;
+    106             1                        306     				vga_plot = 0;
+    107             1                        306     				vga_x_logic = 0;
+    108             1                        306     				vga_y_logic = 0;
+    109             1                        306     				update_offset_x = 0;
+    110             1                        306     				update_offset_y = 0;
+    111             1                        306     				update_crit = 0;
+    112             1                        306     				which_crit = 0;
+    113                                              				if (offset_y <= offset_x) begin
+    114             1                        300     					next_state = CIRCLE_DRAW_PIXEL1;
+    115                                              				end else begin
+    116             1                          6     					next_state = CIRCLE_DRAW_DONE;
+    117                                              				end
+    118                                              			end
+    119                                              			CIRCLE_DRAW_PIXEL1: begin
+    120             1                        300     				done = 0;
+    121             1                        300     				update_offset_x = 0;
+    122             1                        300     				update_offset_y = 0;
+    123             1                        300     				update_crit = 0;
+    124             1                        300     				which_crit = 0;
+    125                                              
+    126             1                        300     				vga_x_logic = centre_x + offset_x;
+    127             1                        300     				vga_y_logic = centre_y + offset_y;
+    128             1                        300     				next_state = CIRCLE_DRAW_PIXEL2;
+    129                                              
+    130                                              				// plot only if it is within bounds, edited for reuleaux
+    131                                              				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    132                                              					if (which_corner == `TOP_CORNER) begin
+    133                                              						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    134             1                    ***0***     							vga_plot = 1;
+    135                                              						end else begin
+    136             1                         78     							vga_plot = 0;
+    137                                              						end
+    138                                              					end else begin
+    139             1                        128     						vga_plot = 0;
+    140                                              					end
+    141                                              					if (which_corner == `BL_CORNER) begin
+    142                                              						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    143             1                          1     							vga_plot = 1;
+    144                                              						end else begin
+    145             1                         27     							vga_plot = 0;
+    146                                              						end
+    147                                              					end else begin
+    148             1                        178     						vga_plot = 0;
+    149                                              					end
+    150                                              					if (which_corner == `BR_CORNER) begin
+    151                                              						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    152             1                    ***0***     							vga_plot = 1;
+    153                                              						end else begin
+    154             1                        100     							vga_plot = 0;
+    155                                              						end
+    156                                              					end else begin
+    157             1                        106     						vga_plot = 0;
+    158                                              					end
+    159                                              				end else begin
+    160             1                         94     					vga_plot = 0;
+    161                                              				end
+    162                                              			end
+    163                                              			CIRCLE_DRAW_PIXEL2: begin
+    164             1                        300     				done = 0;
+    165             1                        300     				update_offset_x = 0;
+    166             1                        300     				update_offset_y = 0;
+    167             1                        300     				update_crit = 0;
+    168             1                        300     				which_crit = 0;
+    169                                              
+    170             1                        300     				vga_x_logic = centre_x + offset_y;
+    171             1                        300     				vga_y_logic = centre_y + offset_x;
+    172             1                        300     				next_state = CIRCLE_DRAW_PIXEL3;
+    173                                              
+    174                                              				// plot only if it is within bounds, edited for reuleaux
+    175                                              				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    176                                              					if (which_corner == `TOP_CORNER) begin
+    177                                              						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    178             1                         20     							vga_plot = 1;
+    179                                              						end else begin
+    180             1                          8     							vga_plot = 0;
+    181                                              						end
+    182                                              					end else begin
+    183             1                         87     						vga_plot = 0;
+    184                                              					end
+    185                                              					if (which_corner == `BL_CORNER) begin
+    186                                              						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    187             1                    ***0***     							vga_plot = 1;
+    188                                              						end else begin
+    189             1                         28     							vga_plot = 0;
+    190                                              						end
+    191                                              					end else begin
+    192             1                         87     						vga_plot = 0;
+    193                                              					end
+    194                                              					if (which_corner == `BR_CORNER) begin
+    195                                              						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    196             1                    ***0***     							vga_plot = 1;
+    197                                              						end else begin
+    198             1                         59     							vga_plot = 0;
+    199                                              						end
+    200                                              					end else begin
+    201             1                         56     						vga_plot = 0;
+    202                                              					end
+    203                                              				end else begin
+    204             1                        185     					vga_plot = 0;
+    205                                              				end
+    206                                              			end
+    207                                              			CIRCLE_DRAW_PIXEL3: begin
+    208             1                        300     				done = 0;
+    209             1                        300     				update_offset_x = 0;
+    210             1                        300     				update_offset_y = 0;
+    211             1                        300     				update_crit = 0;
+    212             1                        300     				which_crit = 0;
+    213                                              
+    214             1                        300     				vga_x_logic = centre_x - offset_x;
+    215             1                        300     				vga_y_logic = centre_y + offset_y;
+    216             1                        300     				next_state = CIRCLE_DRAW_PIXEL4;
+    217                                              
+    218                                              				// plot only if it is within bounds, edited for reuleaux
+    219                                              				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    220                                              					if (which_corner == `TOP_CORNER) begin
+    221                                              						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    222             1                    ***0***     							vga_plot = 1;
+    223                                              						end else begin
+    224             1                         28     							vga_plot = 0;
+    225                                              						end
+    226                                              					end else begin
+    227             1                        100     						vga_plot = 0;
+    228                                              					end
+    229                                              					if (which_corner == `BL_CORNER) begin
+    230                                              						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    231             1                          1     							vga_plot = 1;
+    232                                              						end else begin
+    233             1                         71     							vga_plot = 0;
+    234                                              						end
+    235                                              					end else begin
+    236             1                         56     						vga_plot = 0;
+    237                                              					end
+    238                                              					if (which_corner == `BR_CORNER) begin
+    239                                              						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    240             1                          1     							vga_plot = 1;
+    241                                              						end else begin
+    242             1                         27     							vga_plot = 0;
+    243                                              						end
+    244                                              					end else begin
+    245             1                        100     						vga_plot = 0;
+    246                                              					end
+    247                                              				end else begin
+    248             1                        172     					vga_plot = 0;
+    249                                              				end
+    250                                              			end
+    251                                              			CIRCLE_DRAW_PIXEL4: begin
+    252             1                        300     				done = 0;
+    253             1                        300     				update_offset_x = 0;
+    254             1                        300     				update_offset_y = 0;
+    255             1                        300     				update_crit = 0;
+    256             1                        300     				which_crit = 0;
+    257                                              				
+    258             1                        300     				vga_x_logic = centre_x - offset_y;
+    259             1                        300     				vga_y_logic = centre_y + offset_x;
+    260             1                        300     				next_state = CIRCLE_DRAW_PIXEL5;
+    261                                              
+    262                                              				// plot only if it is within bounds, edited for reuleaux
+    263                                              				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    264                                              					if (which_corner == `TOP_CORNER) begin
+    265                                              						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    266             1                         20     							vga_plot = 1;
+    267                                              						end else begin
+    268             1                          8     							vga_plot = 0;
+    269                                              						end
+    270                                              					end else begin
+    271             1                         85     						vga_plot = 0;
+    272                                              					end
+    273                                              					if (which_corner == `BL_CORNER) begin
+    274                                              						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    275             1                    ***0***     							vga_plot = 1;
+    276                                              						end else begin
+    277             1                         47     							vga_plot = 0;
+    278                                              						end
+    279                                              					end else begin
+    280             1                         66     						vga_plot = 0;
+    281                                              					end
+    282                                              					if (which_corner == `BR_CORNER) begin
+    283                                              						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    284             1                    ***0***     							vga_plot = 1;
+    285                                              						end else begin
+    286             1                         38     							vga_plot = 0;
+    287                                              						end
+    288                                              					end else begin
+    289             1                         75     						vga_plot = 0;
+    290                                              					end
+    291                                              				end else begin
+    292             1                        187     					vga_plot = 0;
+    293                                              				end
+    294                                              			end
+    295                                              			CIRCLE_DRAW_PIXEL5: begin
+    296             1                        300     				done = 0;
+    297             1                        300     				update_offset_x = 0;
+    298             1                        300     				update_offset_y = 0;
+    299             1                        300     				update_crit = 0;
+    300             1                        300     				which_crit = 0;
+    301                                              				
+    302             1                        300     				vga_x_logic = centre_x - offset_x;
+    303             1                        300     				vga_y_logic = centre_y - offset_y;
+    304             1                        300     				next_state = CIRCLE_DRAW_PIXEL6;
+    305                                              
+    306                                              				// plot only if it is within bounds, edited for reuleaux
+    307                                              				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    308                                              					if (which_corner == `TOP_CORNER) begin
+    309                                              						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    310             1                    ***0***     							vga_plot = 1;
+    311                                              						end else begin
+    312             1                          9     							vga_plot = 0;
+    313                                              						end
+    314                                              					end else begin
+    315             1                         57     						vga_plot = 0;
+    316                                              					end
+    317                                              					if (which_corner == `BL_CORNER) begin
+    318                                              						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    319             1                         29     							vga_plot = 1;
+    320                                              						end else begin
+    321             1                    ***0***     							vga_plot = 0;
+    322                                              						end
+    323                                              					end else begin
+    324             1                         37     						vga_plot = 0;
+    325                                              					end
+    326                                              					if (which_corner == `BR_CORNER) begin
+    327                                              						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    328             1                         28     							vga_plot = 1;
+    329                                              						end else begin
+    330             1                    ***0***     							vga_plot = 0;
+    331                                              						end
+    332                                              					end else begin
+    333             1                         38     						vga_plot = 0;
+    334                                              					end
+    335                                              				end else begin
+    336             1                        234     					vga_plot = 0;
+    337                                              				end
+    338                                              			end
+    339                                              			CIRCLE_DRAW_PIXEL6: begin
+    340             1                        300     				done = 0;
+    341             1                        300     				update_offset_x = 0;
+    342             1                        300     				update_offset_y = 0;
+    343             1                        300     				update_crit = 0;
+    344             1                        300     				which_crit = 0;
+    345                                              				
+    346             1                        300     				vga_x_logic = centre_x - offset_y;
+    347             1                        300     				vga_y_logic = centre_y - offset_x;
+    348             1                        300     				next_state = CIRCLE_DRAW_PIXEL7;
+    349                                              
+    350                                              				// plot only if it is within bounds, edited for reuleaux
+    351                                              				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    352                                              					if (which_corner == `TOP_CORNER) begin
+    353                                              						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    354             1                    ***0***     							vga_plot = 1;
+    355                                              						end else begin
+    356             1                    ***0***     							vga_plot = 0;
+    357                                              						end
+    358                                              					end else begin
+    359             1                         50     						vga_plot = 0;
+    360                                              					end
+    361                                              					if (which_corner == `BL_CORNER) begin
+    362                                              						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    363             1                    ***0***     							vga_plot = 1;
+    364                                              						end else begin
+    365             1                         22     							vga_plot = 0;
+    366                                              						end
+    367                                              					end else begin
+    368             1                         28     						vga_plot = 0;
+    369                                              					end
+    370                                              					if (which_corner == `BR_CORNER) begin
+    371                                              						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    372             1                          9     							vga_plot = 1;
+    373                                              						end else begin
+    374             1                         19     							vga_plot = 0;
+    375                                              						end
+    376                                              					end else begin
+    377             1                         22     						vga_plot = 0;
+    378                                              					end
+    379                                              				end else begin
+    380             1                        250     					vga_plot = 0;
+    381                                              				end
+    382                                              			end
+    383                                              			CIRCLE_DRAW_PIXEL7: begin
+    384             1                        300     				done = 0;
+    385             1                        300     				update_offset_x = 0;
+    386             1                        300     				update_offset_y = 0;
+    387             1                        300     				update_crit = 0;
+    388             1                        300     				which_crit = 0;
+    389                                              				
+    390             1                        300     				vga_x_logic = centre_x + offset_x;
+    391             1                        300     				vga_y_logic = centre_y - offset_y;
+    392             1                        300     				next_state = CIRCLE_DRAW_PIXEL8;
+    393                                              
+    394                                              				// plot only if it is within bounds, edited for reuleaux
+    395                                              				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    396                                              					if (which_corner == `TOP_CORNER) begin
+    397                                              						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    398             1                    ***0***     							vga_plot = 1;
+    399                                              						end else begin
+    400             1                         80     							vga_plot = 0;
+    401                                              						end
+    402                                              					end else begin
+    403             1                         85     						vga_plot = 0;
+    404                                              					end
+    405                                              					if (which_corner == `BL_CORNER) begin
+    406                                              						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    407             1                         28     							vga_plot = 1;
+    408                                              						end else begin
+    409             1                    ***0***     							vga_plot = 0;
+    410                                              						end
+    411                                              					end else begin
+    412             1                        137     						vga_plot = 0;
+    413                                              					end
+    414                                              					if (which_corner == `BR_CORNER) begin
+    415                                              						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    416             1                    ***0***     							vga_plot = 1;
+    417                                              						end else begin
+    418             1                         57     							vga_plot = 0;
+    419                                              						end
+    420                                              					end else begin
+    421             1                        108     						vga_plot = 0;
+    422                                              					end
+    423                                              				end else begin
+    424             1                        135     					vga_plot = 0;
+    425                                              				end
+    426                                              			end
+    427                                              			CIRCLE_DRAW_PIXEL8: begin
+    428             1                        300     				done = 0;
+    429             1                        300     				update_offset_x = 0;
+    430             1                        300     				update_offset_y = 0;
+    431             1                        300     				update_crit = 0;
+    432             1                        300     				which_crit = 0;
+    433                                              				
+    434             1                        300     				vga_x_logic = centre_x + offset_y;
+    435             1                        300     				vga_y_logic = centre_y - offset_x;
+    436             1                        300     				next_state = CIRCLE_CRIT_CHECK;
+    437                                              
+    438                                              				// plot only if it is within bounds, edited for reuleaux
+    439                                              				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    440                                              					if (which_corner == `TOP_CORNER) begin
+    441                                              						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    442             1                    ***0***     							vga_plot = 1;
+    443                                              						end else begin
+    444             1                    ***0***     							vga_plot = 0;
+    445                                              						end
+    446                                              					end else begin
+    447             1                         56     						vga_plot = 0;
+    448                                              					end
+    449                                              					if (which_corner == `BL_CORNER) begin
+    450                                              						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    451             1                          9     							vga_plot = 1;
+    452                                              						end else begin
+    453             1                         19     							vga_plot = 0;
+    454                                              						end
+    455                                              					end else begin
+    456             1                         28     						vga_plot = 0;
+    457                                              					end
+    458                                              					if (which_corner == `BR_CORNER) begin
+    459                                              						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    460             1                    ***0***     							vga_plot = 1;
+    461                                              						end else begin
+    462             1                         28     							vga_plot = 0;
+    463                                              						end
+    464                                              					end else begin
+    465             1                         28     						vga_plot = 0;
+    466                                              					end
+    467                                              				end else begin
+    468             1                        244     					vga_plot = 0;
+    469                                              				end
+    470                                              			end
+    471                                              			CIRCLE_CRIT_CHECK: begin
+    472             1                        300     				vga_plot = 0;
+    473             1                        300     				done = 0;
+    474             1                        300     				vga_x_logic = 0;
+    475             1                        300     				vga_y_logic = 0;
+    476             1                        300     				update_offset_x = 0;
+    477             1                        300     				update_offset_y = 1;
+    478             1                        300     				update_crit = 0;
+    479             1                        300     				which_crit = 0;
+    480                                              
+    481                                              				if (crit <= 0) begin
+    482             1                        174     					next_state = CIRCLE_CRIT_LE_ZERO;
+    483                                              				end else begin
+    484             1                        126                 		next_state = CIRCLE_CRIT_GT_ZERO;
+    485                                              				end
+    486                                              			end
+    487                                              			CIRCLE_CRIT_LE_ZERO: begin
+    488             1                        174     				vga_plot = 0;
+    489             1                        174     				done = 0;
+    490             1                        174     				vga_x_logic = 0;
+    491             1                        174     				vga_y_logic = 0;
+    492             1                        174     				update_offset_x = 0;
+    493             1                        174     				update_offset_y = 0;
+    494             1                        174     				update_crit = 1;
+    495             1                        174     				which_crit = 0;
+    496                                              
+    497             1                        174     				next_state <= CIRCLE_CHECK_LOOP;
+    498                                              			end
+    499                                              			CIRCLE_CRIT_GT_ZERO: begin
+    500             1                        126     				vga_plot = 0;
+    501             1                        126     				done = 0;
+    502             1                        126     				vga_x_logic = 0;
+    503             1                        126     				vga_y_logic = 0;
+    504             1                        126     				update_offset_x = 1;
+    505             1                        126     				update_offset_y = 0;
+    506             1                        126     				update_crit = 1;
+    507             1                        126     				which_crit = 1;
+    508             1                        126     				next_state <= CIRCLE_CHECK_LOOP;
+    509                                              			end
+    510                                              			CIRCLE_DRAW_DONE: begin
+    511             1                         12     				done = 1;
+    512             1                         12     				vga_plot = 0;
+    513             1                         12     				vga_x_logic = 0;
+    514             1                         12     				vga_y_logic = 0;
+    515             1                         12     				update_offset_x = 0;
+    516             1                         12     				update_offset_y = 0;
+    517             1                         12     				update_crit = 0;
+    518             1                         12     				which_crit = 0;
+    519                                              				if (start) begin
+    520             1                          6     					next_state = CIRCLE_DRAW_DONE;
+    521                                              				end else begin
+    522             1                          6     					next_state = CIRCLE_WAIT;
+    523                                              				end
+    524                                              			end
+    525                                              			default begin
+    526                                              				//panic
+    527             1                    ***0***     				done = 0;
+    528             1                    ***0***     				vga_plot = 0;
+    529             1                    ***0***     				vga_x_logic = 119;
+    530             1                    ***0***     				vga_y_logic = 159;
+    531             1                    ***0***     				update_offset_x = 0;
+    532             1                    ***0***     				update_offset_y = 0;
+    533             1                    ***0***     				update_crit = 0;
+    534             1                    ***0***     				which_crit = 0;
+    535             1                    ***0***     				next_state = CIRCLE_WAIT;
+    536                                              			end
+    537                                              		endcase
+    538                                              
+    539             1                       3338     		vga_colour = colour;
+    540             1                       3338     		vga_x = vga_x_logic[7:0];
+    541             1                       3338             vga_y = vga_y_logic[6:0];
+    542             1                       3338     		next_crit = which_crit ? crit + (2 * (offset_y - offset_x)) + 1 : crit + (2 * offset_y) + 1;
+    543                                              	end
+    544                                              	 
+    545                                              endmodule
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                       148       126        22     85.13
+
+================================Branch Details================================
+
+Branch Coverage for file circle.sv --
+
+------------------------------------IF Branch------------------------------------
+    50                                      3319     Count coming in to IF
+    50              1                          7     		if(!rst_n) begin
+    52              1                       3312     		end	else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    59                                       275     Count coming in to IF
+    59              1                         17     		if (!rst_n) begin
+    62              1                        126             else if (update_offset_x) begin
+                                             132     All False Count
+Branch totals: 3 hits of 3 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    69                                       620     Count coming in to IF
+    69              1                         14     		if (!rst_n) begin
+    72              1                        300             else if (update_offset_y) begin
+                                             306     All False Count
+Branch totals: 3 hits of 3 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    79                                       623     Count coming in to IF
+    79              1                         17     		if (!rst_n) begin
+    81              1                        300             end else if (update_crit) begin
+                                             306     All False Count
+Branch totals: 3 hits of 3 branches = 100.00%
+
+------------------------------------CASE Branch------------------------------------
+    88                                      3338     Count coming in to CASE
+    89              1                         20     			CIRCLE_WAIT: begin
+    104             1                        306     			CIRCLE_CHECK_LOOP: begin
+    119             1                        300     			CIRCLE_DRAW_PIXEL1: begin
+    163             1                        300     			CIRCLE_DRAW_PIXEL2: begin
+    207             1                        300     			CIRCLE_DRAW_PIXEL3: begin
+    251             1                        300     			CIRCLE_DRAW_PIXEL4: begin
+    295             1                        300     			CIRCLE_DRAW_PIXEL5: begin
+    339             1                        300     			CIRCLE_DRAW_PIXEL6: begin
+    383             1                        300     			CIRCLE_DRAW_PIXEL7: begin
+    427             1                        300     			CIRCLE_DRAW_PIXEL8: begin
+    471             1                        300     			CIRCLE_CRIT_CHECK: begin
+    487             1                        174     			CIRCLE_CRIT_LE_ZERO: begin
+    499             1                        126     			CIRCLE_CRIT_GT_ZERO: begin
+    510             1                         12     			CIRCLE_DRAW_DONE: begin
+    525             1                    ***0***     			default begin
+Branch totals: 14 hits of 15 branches = 93.33%
+
+------------------------------------IF Branch------------------------------------
+    98                                        20     Count coming in to IF
+    98              1                          6     				if (start) begin
+    100             1                         14     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    113                                      306     Count coming in to IF
+    113             1                        300     				if (offset_y <= offset_x) begin
+    115             1                          6     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    131                                      300     Count coming in to IF
+    131             1                        206     				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    159             1                         94     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    132                                      206     Count coming in to IF
+    132             1                         78     					if (which_corner == `TOP_CORNER) begin
+    138             1                        128     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    133                                       78     Count coming in to IF
+    133             1                    ***0***     						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    135             1                         78     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    141                                      206     Count coming in to IF
+    141             1                         28     					if (which_corner == `BL_CORNER) begin
+    147             1                        178     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    142                                       28     Count coming in to IF
+    142             1                          1     						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    144             1                         27     						end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    150                                      206     Count coming in to IF
+    150             1                        100     					if (which_corner == `BR_CORNER) begin
+    156             1                        106     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    151                                      100     Count coming in to IF
+    151             1                    ***0***     						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    153             1                        100     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    175                                      300     Count coming in to IF
+    175             1                        115     				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    203             1                        185     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    176                                      115     Count coming in to IF
+    176             1                         28     					if (which_corner == `TOP_CORNER) begin
+    182             1                         87     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    177                                       28     Count coming in to IF
+    177             1                         20     						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    179             1                          8     						end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    185                                      115     Count coming in to IF
+    185             1                         28     					if (which_corner == `BL_CORNER) begin
+    191             1                         87     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    186                                       28     Count coming in to IF
+    186             1                    ***0***     						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    188             1                         28     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    194                                      115     Count coming in to IF
+    194             1                         59     					if (which_corner == `BR_CORNER) begin
+    200             1                         56     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    195                                       59     Count coming in to IF
+    195             1                    ***0***     						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    197             1                         59     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    219                                      300     Count coming in to IF
+    219             1                        128     				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    247             1                        172     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    220                                      128     Count coming in to IF
+    220             1                         28     					if (which_corner == `TOP_CORNER) begin
+    226             1                        100     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    221                                       28     Count coming in to IF
+    221             1                    ***0***     						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    223             1                         28     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    229                                      128     Count coming in to IF
+    229             1                         72     					if (which_corner == `BL_CORNER) begin
+    235             1                         56     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    230                                       72     Count coming in to IF
+    230             1                          1     						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    232             1                         71     						end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    238                                      128     Count coming in to IF
+    238             1                         28     					if (which_corner == `BR_CORNER) begin
+    244             1                        100     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    239                                       28     Count coming in to IF
+    239             1                          1     						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    241             1                         27     						end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    263                                      300     Count coming in to IF
+    263             1                        113     				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    291             1                        187     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    264                                      113     Count coming in to IF
+    264             1                         28     					if (which_corner == `TOP_CORNER) begin
+    270             1                         85     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    265                                       28     Count coming in to IF
+    265             1                         20     						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    267             1                          8     						end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    273                                      113     Count coming in to IF
+    273             1                         47     					if (which_corner == `BL_CORNER) begin
+    279             1                         66     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    274                                       47     Count coming in to IF
+    274             1                    ***0***     						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    276             1                         47     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    282                                      113     Count coming in to IF
+    282             1                         38     					if (which_corner == `BR_CORNER) begin
+    288             1                         75     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    283                                       38     Count coming in to IF
+    283             1                    ***0***     						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    285             1                         38     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    307                                      300     Count coming in to IF
+    307             1                         66     				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    335             1                        234     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    308                                       66     Count coming in to IF
+    308             1                          9     					if (which_corner == `TOP_CORNER) begin
+    314             1                         57     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    309                                        9     Count coming in to IF
+    309             1                    ***0***     						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    311             1                          9     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    317                                       66     Count coming in to IF
+    317             1                         29     					if (which_corner == `BL_CORNER) begin
+    323             1                         37     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    318                                       29     Count coming in to IF
+    318             1                         29     						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    320             1                    ***0***     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    326                                       66     Count coming in to IF
+    326             1                         28     					if (which_corner == `BR_CORNER) begin
+    332             1                         38     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    327                                       28     Count coming in to IF
+    327             1                         28     						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    329             1                    ***0***     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    351                                      300     Count coming in to IF
+    351             1                         50     				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    379             1                        250     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    352                                       50     Count coming in to IF
+    352             1                    ***0***     					if (which_corner == `TOP_CORNER) begin
+    358             1                         50     					end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    353                                  ***0***     Count coming in to IF
+    353             1                    ***0***     						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    355             1                    ***0***     						end else begin
+Branch totals: 0 hits of 2 branches = 0.00%
+
+------------------------------------IF Branch------------------------------------
+    361                                       50     Count coming in to IF
+    361             1                         22     					if (which_corner == `BL_CORNER) begin
+    367             1                         28     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    362                                       22     Count coming in to IF
+    362             1                    ***0***     						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    364             1                         22     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    370                                       50     Count coming in to IF
+    370             1                         28     					if (which_corner == `BR_CORNER) begin
+    376             1                         22     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    371                                       28     Count coming in to IF
+    371             1                          9     						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    373             1                         19     						end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    395                                      300     Count coming in to IF
+    395             1                        165     				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    423             1                        135     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    396                                      165     Count coming in to IF
+    396             1                         80     					if (which_corner == `TOP_CORNER) begin
+    402             1                         85     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    397                                       80     Count coming in to IF
+    397             1                    ***0***     						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    399             1                         80     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    405                                      165     Count coming in to IF
+    405             1                         28     					if (which_corner == `BL_CORNER) begin
+    411             1                        137     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    406                                       28     Count coming in to IF
+    406             1                         28     						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    408             1                    ***0***     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    414                                      165     Count coming in to IF
+    414             1                         57     					if (which_corner == `BR_CORNER) begin
+    420             1                        108     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    415                                       57     Count coming in to IF
+    415             1                    ***0***     						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    417             1                         57     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    439                                      300     Count coming in to IF
+    439             1                         56     				if (vga_x_logic <= 9'd159 && vga_y_logic <= 8'd119) begin
+    467             1                        244     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    440                                       56     Count coming in to IF
+    440             1                    ***0***     					if (which_corner == `TOP_CORNER) begin
+    446             1                         56     					end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    441                                  ***0***     Count coming in to IF
+    441             1                    ***0***     						if (vga_x_logic >= bounds_x && vga_x_logic <= bounds2_x && vga_y_logic >= bounds2_y) begin
+    443             1                    ***0***     						end else begin
+Branch totals: 0 hits of 2 branches = 0.00%
+
+------------------------------------IF Branch------------------------------------
+    449                                       56     Count coming in to IF
+    449             1                         28     					if (which_corner == `BL_CORNER) begin
+    455             1                         28     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    450                                       28     Count coming in to IF
+    450             1                          9     						if (vga_x_logic >= bounds_x && vga_y_logic <= bounds2_y) begin
+    452             1                         19     						end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    458                                       56     Count coming in to IF
+    458             1                         28     					if (which_corner == `BR_CORNER) begin
+    464             1                         28     					end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    459                                       28     Count coming in to IF
+    459             1                    ***0***     						if (vga_x_logic <= bounds_x && vga_y_logic <= bounds2_y) begin
+    461             1                         28     						end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    481                                      300     Count coming in to IF
+    481             1                        174     				if (crit <= 0) begin
+    483             1                        126     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    519                                       12     Count coming in to IF
+    519             1                          6     				if (start) begin
+    521             1                          6     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    542                                     3338     Count coming in to IF
+    542             1                        126     		next_crit = which_crit ? crit + (2 * (offset_y - offset_x)) + 1 : crit + (2 * offset_y) + 1;
+    542             2                       3212     		next_crit = which_crit ? crit + (2 * (offset_y - offset_x)) + 1 : crit + (2 * offset_y) + 1;
+Branch totals: 2 hits of 2 branches = 100.00%
+
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                    272       269         3     98.89
+
+================================Toggle Details================================
+
+Toggle Coverage for File circle.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+         32                             curr_state               ENUM type       Value       Count 
+         33                             next_state               ENUM type       Value       Count 
+         35                            offset_x[7]           0           0                                0.00 
+         35                            offset_x[6]           0           1                               50.00 
+
+Total Node Count     =        150 
+Toggled Node Count   =        148 
+Untoggled Node Count =          2 
+
+Toggle Coverage      =      98.89% (269 of 272 bins)
+
+=================================================================================
+=== File: fillscreen.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           10        10         0    100.00
+
+================================Statement Details================================
+
+Statement Coverage for file fillscreen.sv --
+
+    1                                                module fillscreen(input logic clk, input logic rst_n, input logic [2:0] colour,
+    2                                                                  input logic start, output logic done,
+    3                                                                  output logic [7:0] vga_x, output logic [6:0] vga_y,
+    4                                                                  output logic [2:0] vga_colour, output logic vga_plot);
+    5                                                     // fill the screen
+    6                                                	 logic [7:0] count_x;
+    7                                                	 logic [6:0] count_y;
+    8                                                	 
+    9                                                	 assign vga_x = count_x;
+    10                                               	 assign vga_y = count_y;
+    11                                               	 
+    12              1                      38410     	 always @(posedge clk)begin
+    13                                               		if(!rst_n)
+    14                                               			begin
+    15              1                          6     				count_x <= 8'b11111111;
+    16              1                          6     				count_y <= 7'd0;
+    17              1                          6     				done <= 1'b0;
+    18              1                          6     				vga_colour <= colour;
+    19                                               			end
+    20                                               		else if( count_x == 8'd159 && count_y == 7'd119 )
+    21              1                          4     			done <= 1'b1;
+    22                                               			
+    23                                               		else if( start == 1'b1 && done == 1'b0)
+    24                                               			begin
+    25              1                      38400     				count_x <= count_x + 1'b1;
+    26                                               				if (count_x == 8'd159) begin
+    27              1                        238     					count_x <= 0;
+    28              1                        238     					count_y <= count_y + 3'b001;
+    29                                               				end
+    30              1                      38400     				vga_plot <= 1'b1;
+    31                                               			end		
+    32                                               	 end
+    33                                               	 
+    34                                               endmodule
+    35                                               
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                         6         5         1     83.33
+
+================================Branch Details================================
+
+Branch Coverage for file fillscreen.sv --
+
+------------------------------------IF Branch------------------------------------
+    13                                     38410     Count coming in to IF
+    13              1                          6     		if(!rst_n)
+    20              1                          4     		else if( count_x == 8'd159 && count_y == 7'd119 )
+    23              1                      38400     		else if( start == 1'b1 && done == 1'b0)
+                                         ***0***     All False Count
+Branch totals: 3 hits of 4 branches = 75.00%
+
+------------------------------------IF Branch------------------------------------
+    26                                     38400     Count coming in to IF
+    26              1                        238     				if (count_x == 8'd159) begin
+                                           38162     All False Count
+Branch totals: 2 hits of 2 branches = 100.00%
+
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                     70        62         8     88.57
+
+================================Toggle Details================================
+
+Toggle Coverage for File fillscreen.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+          4                               vga_plot           0           0                                0.00 
+          4                          vga_colour[2]           0           0                                0.00 
+          4                          vga_colour[1]           0           0                                0.00 
+          4                          vga_colour[0]           0           0                                0.00 
+
+Total Node Count     =         35 
+Toggled Node Count   =         31 
+Untoggled Node Count =          4 
+
+Toggle Coverage      =      88.57% (62 of 70 bins)
+
+=================================================================================
+=== File: reuleaux.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                          154       139        15     90.25
+
+================================Statement Details================================
+
+Statement Coverage for file reuleaux.sv --
+
+    1                                                `define SQRT3_3xDiameter {8'b00101110 , 8'b00110000 }
+    2                                                `define SQRT3_6xDiameter {8'b00010111 , 8'b00011000 }
+    3                                                
+    4                                                `define SQRT3_3 {8'b00000000 , 11'b10010011110 }
+    5                                                `define SQRT3_6 {8'b00000000 , 11'b01001001111 }
+    6                                                
+    7                                                module reuleaux(input logic clk, input logic rst_n, input logic [2:0] colour,
+    8                                                                input logic [7:0] centre_x, input logic [6:0] centre_y, input logic [7:0] diameter,
+    9                                                                input logic start, output logic done,
+    10                                                               output logic [7:0] vga_x, output logic [6:0] vga_y,
+    11                                                               output logic [2:0] vga_colour, output logic vga_plot);
+    12                                                    // draw the Reuleaux triangle
+    13                                               
+    14                                                    //Fixed Point Values
+    15                                                    parameter FRAC_BITS = 11;
+    16                                                    parameter INT_BITS = 8;
+    17                                               
+    18                                               
+    19                                               
+    20                                                    //Instantiating fillscreen (for Background)
+    21                                                    logic bg_rst, bg_start, bg_done, bg_plot;
+    22                                                    logic [2:0] bg_colour, bg_vga_colour;
+    23                                                    logic [7:0] bg_vga_x;
+    24                                                    logic [6:0] bg_vga_y;
+    25                                               
+    26                                                    
+    27                                                    fillscreen bg(
+    28                                                         .clk (clk), 
+    29                                                         .rst_n (bg_rst), 
+    30                                                         .colour (bg_colour),
+    31                                                         .start (bg_start), 
+    32                                                         .done (bg_done),
+    33                                                         .vga_x (bg_vga_x), 
+    34                                                         .vga_y (bg_vga_y),
+    35                                                         .vga_colour (bg_vga_colour), 
+    36                                                         .vga_plot ( bg_plot)
+    37                                                         );
+    38                                               
+    39                                                    //Instantiating circle
+    40                                                    logic circle_rst, circle_start, circle_done, circle_vga_plot;
+    41                                                    logic [2:0] circle_colour, circle_vga_colour;
+    42                                                    logic [7:0] circle_radius, circle_vga_x;
+    43                                                    logic [6:0] circle_vga_y;
+    44                                               
+    45                                                    logic [FRAC_BITS + INT_BITS - 1:0] circle_center_x, circle_center_y, opposite_x1, opposite_y1, opposite_x2, opposite_y2;
+    46                                                    logic [1:0] which_corner;
+    47                                                    circle circleDraw(
+    48                                                         .clk (clk), 
+    49                                                         .rst_n (circle_rst), 
+    50                                                         .colour (circle_colour),
+    51                                                         .centre_x ( circle_center_x [INT_BITS + FRAC_BITS - 1: FRAC_BITS]), 
+    52                                                         .centre_y ( circle_center_y [INT_BITS + FRAC_BITS - 1: FRAC_BITS]), 
+    53                                                         .radius (circle_radius),
+    54                                                         .start (circle_start), 
+    55                                                         .done (circle_done),
+    56                                                         .vga_x (circle_vga_x), 
+    57                                                         .vga_y (circle_vga_y),
+    58                                                         .vga_colour (circle_vga_colour), 
+    59                                                         .vga_plot (circle_vga_plot),
+    60                                                         //              0  ,18:11 
+    61                                                         .bounds_x  ({1'b0 , opposite_x1 [INT_BITS + FRAC_BITS - 1: FRAC_BITS]}),
+    62                                                         .bounds_y  ({1'b0 , opposite_y1 [INT_BITS + FRAC_BITS - 1: FRAC_BITS]}),
+    63                                                         .bounds2_x ({1'b0 , opposite_x2 [INT_BITS + FRAC_BITS - 1: FRAC_BITS]}),
+    64                                                         .bounds2_y ({1'b0 , opposite_y2 [INT_BITS + FRAC_BITS - 1: FRAC_BITS]}),
+    65                                                         .which_corner (which_corner)
+    66                                                         );
+    67                                               
+    68                                                    typedef enum { 
+    69                                                         RESET_ST,
+    70                                                         FILLBACKGROUND,
+    71                                                         CIRCLE_WAIT1,
+    72                                                         CIRCLE_DRAW1,
+    73                                                         CIRCLE_WAIT2,
+    74                                                         CIRCLE_DRAW2,
+    75                                                         CIRCLE_WAIT3,
+    76                                                         CIRCLE_DRAW3,
+    77                                                         DONE
+    78                                               	} state_t;
+    79                                               
+    80                                                    state_t curr_state;
+    81                                               
+    82                                                    //STATEMACHINE (Reset_ST state->Fill Background->Draw Circle 1->Draw Circle 2->Draw Circle 3->Done)
+    83              1                         33          always @(posedge clk) begin
+    84                                                         if(!rst_n) begin
+    85              1                          2                    curr_state <= RESET_ST;
+    86                                                         end
+    87                                                         else 
+    88                                                         case (curr_state)
+    89                                                              RESET_ST:
+    90                                                              begin
+    91                                                                   if(start == 1)
+    92                                                                   begin
+    93              1                          2                              curr_state <= FILLBACKGROUND;
+    94                                                                   end 
+    95                                                                   else 
+    96                                                                   begin
+    97              1                          1                              curr_state <= curr_state;
+    98                                                                   end
+    99                                                              end
+    100                                                             FILLBACKGROUND:
+    101                                                             begin
+    102                                                                  if(bg_done == 1)
+    103                                                                  begin
+    104             1                          2                              curr_state <= CIRCLE_WAIT1;
+    105                                                                  end 
+    106                                                                  else 
+    107                                                                  begin
+    108             1                          2                              curr_state <= curr_state;
+    109                                                                  end
+    110                                                             end
+    111                                                             CIRCLE_DRAW1:
+    112                                                             begin 
+    113                                                                  if(circle_done == 1)
+    114                                                                  begin
+    115             1                          2                              curr_state <= CIRCLE_WAIT2;
+    116                                                                  end 
+    117                                                                  else 
+    118                                                                  begin
+    119             1                          2                              curr_state <= curr_state;
+    120                                                                  end
+    121                                                             end
+    122                                                             CIRCLE_DRAW2:
+    123                                                             begin 
+    124                                                                  if(circle_done == 1)
+    125                                                                  begin
+    126             1                          2                              curr_state <= CIRCLE_WAIT3;
+    127                                                                  end 
+    128                                                                  else 
+    129                                                                  begin
+    130             1                          2                              curr_state <= curr_state;
+    131                                                                  end
+    132                                                             end
+    133                                                             CIRCLE_DRAW3:
+    134                                                             begin 
+    135                                                                  if(circle_done == 1)
+    136                                                                  begin
+    137             1                          2                              curr_state <= DONE;
+    138                                                                  end 
+    139                                                                  else 
+    140                                                                  begin
+    141             1                          2                              curr_state <= curr_state;
+    142                                                                  end
+    143                                                             end
+    144                                                             DONE:
+    145                                                             begin
+    146             1                          2                         curr_state <= curr_state;
+    147                                                             end
+    148                                                             CIRCLE_WAIT1:
+    149                                                             begin
+    150                                                                  if(circle_done == 0)
+    151                                                                  begin
+    152             1                          2                              curr_state <= CIRCLE_DRAW1;   
+    153                                                                  end
+    154                                                                  else 
+    155                                                                  begin
+    156             1                    ***0***                              curr_state <= curr_state; 
+    157                                                                  end
+    158                                                             end
+    159                                                             CIRCLE_WAIT2:
+    160                                                             begin
+    161                                                                  if(circle_done == 0)
+    162                                                                  begin
+    163             1                          2                              curr_state <= CIRCLE_DRAW2;   
+    164                                                                  end
+    165                                                                  else 
+    166                                                                  begin
+    167             1                          2                              curr_state <= curr_state; 
+    168                                                                  end
+    169                                                             end
+    170                                                             CIRCLE_WAIT3:
+    171                                                             begin
+    172                                                                  if(circle_done == 0)
+    173                                                                  begin
+    174             1                          2                              curr_state <= CIRCLE_DRAW3;   
+    175                                                                  end
+    176                                                                  else 
+    177                                                                  begin
+    178             1                          2                              curr_state <= curr_state; 
+    179                                                                  end
+    180                                                             end
+    181                                                             default:
+    182                                                             begin
+    183             1                    ***0***                         curr_state <= RESET_ST;      
+    184                                                             end
+    185                                                        endcase
+    186                                              	end
+    187                                              
+    188                                                   logic [29:0] sqrt3_6xdiameter;
+    189                                                   logic [29:0] sqrt3_3xdiameter;
+    190                                              
+    191                                                   //Setting MACRO
+    192                                                   //Bundle of signals that change
+    193                                                   `define SIGBUNDLE {bg_rst, bg_start, bg_colour, circle_rst, circle_start, circle_colour, circle_radius}
+    194                                                   //Coordinates of Right Corner
+    195                                                   `define CORNERX1 {centre_x + (diameter >> 1), 11'b0};
+    196                                                   `define CORNERY1 {1'b0, centre_y, 11'd0} + {sqrt3_6xdiameter [29:11]};
+    197                                                   //Coordinates of Left Corner
+    198                                                   `define CORNERX2 {centre_x - (diameter >> 1), 11'b0};
+    199                                                   `define CORNERY2 {1'b0, centre_y, 11'd0} + {sqrt3_6xdiameter [29:11]};
+    200                                                   //Coordinates of TOP Corner
+    201                                                   `define CORNERX3 {centre_x, 11'b0};
+    202                                                   `define CORNERY3 {1'b0, centre_y, 11'd0} - {sqrt3_3xdiameter [29:11]};
+    203                                              
+    204                                                   //Setting Signals
+    205             1                      41110          always_comb begin : signalGenerator
+    206             1                      41110               sqrt3_3xdiameter = ( `SQRT3_3 * {diameter, 11'd0});
+    207             1                      41110               sqrt3_6xdiameter = ( `SQRT3_6 * {diameter, 11'd0});
+    208                                                        case (curr_state)
+    209                                                             //                                    {bg_rst, bg_start, bg_colour, circle_rst, circle_start, circle_colour, circle_radius}                          
+    210                                                             RESET_ST:      begin
+    211             1                          7                                        `SIGBUNDLE      = {1'b0  , 1'b0    , 3'b000   , 1'b0      , 1'b0        , 3'b100       , diameter  };
+    212             1                          7                                        circle_center_x = 16'd0;
+    213             1                          7                                        circle_center_y = 16'd0;
+    214             1                          7                                        opposite_x1     = 16'd0;
+    215             1                          7                                        opposite_y1     = 16'd0;
+    216             1                          7                                        opposite_x2     = 16'd0;
+    217             1                          7                                        opposite_y2     = 16'd0;
+    218             1                          7                                        which_corner = 2'b00;
+    219             1                          7                                        vga_x =     bg_vga_x;
+    220             1                          7                                        vga_y =     bg_vga_y;
+    221             1                          7                                        vga_colour= bg_vga_colour;
+    222             1                          7                                        vga_plot=   bg_plot;
+    223             1                          7                                        done = 1'b0;
+    224                                                                            end
+    225                                                             FILLBACKGROUND:begin
+    226             1                      38402                                        `SIGBUNDLE      = {1'b1  , 1'b1    , 3'b000   , 1'b0      , 1'b0        , 3'b100       , diameter  };
+    227             1                      38402                                        circle_center_x = 16'd0;
+    228             1                      38402                                        circle_center_y = 16'd0;
+    229             1                      38402                                        opposite_x1     = 16'd0;
+    230             1                      38402                                        opposite_y1     = 16'd0;
+    231             1                      38402                                        opposite_x2     = 16'd0;
+    232             1                      38402                                        opposite_y2     = 16'd0;
+    233             1                      38402                                        which_corner = 2'b00;
+    234             1                      38402                                        vga_x =     bg_vga_x;
+    235             1                      38402                                        vga_y =     bg_vga_y;
+    236             1                      38402                                        vga_colour= bg_vga_colour;
+    237             1                      38402                                        vga_plot=   bg_plot;
+    238             1                      38402                                        done = 1'b0;                                   
+    239                                                                            end
+    240                                                             CIRCLE_WAIT1:  begin
+    241             1                          2                                        `SIGBUNDLE      = {1'b0  , 1'b0    , 3'b000   , 1'b0      , 1'b0        , 3'b100       , diameter  };
+    242             1                          2                                        circle_center_x = `CORNERX1;
+    243             1                          2                                        circle_center_y = `CORNERY1;
+    244                                                                                 //Opposing Corner 1
+    245             1                          2                                        opposite_x1     = `CORNERX3;
+    246             1                          2                                        opposite_y1     = `CORNERY3;
+    247                                                                                 //Opposing Corner 2
+    248             1                          2                                        opposite_x2     = `CORNERX2;
+    249             1                          2                                        opposite_y2     = `CORNERY2;
+    250             1                          2                                        which_corner = 2'b10;
+    251             1                          2                                        vga_x =     circle_vga_x;
+    252             1                          2                                        vga_y =     circle_vga_y;
+    253             1                          2                                        vga_colour= circle_vga_colour;
+    254             1                          2                                        vga_plot=   circle_vga_plot;
+    255             1                          2                                        done = 1'b0;
+    256                                                                            end
+    257                                                             CIRCLE_WAIT2:  begin
+    258             1                          4                                        `SIGBUNDLE      = {1'b0  , 1'b0    , 3'b000   , 1'b0      , 1'b0        , 3'b100       , diameter  };
+    259             1                          4                                        circle_center_x = `CORNERX2;
+    260             1                          4                                        circle_center_y = `CORNERY2;
+    261                                                                                 //Opposing Corner 1
+    262             1                          4                                        opposite_x1     = `CORNERX3;
+    263             1                          4                                        opposite_y1     = `CORNERY3;
+    264                                                                                 //Opposing Corner 2
+    265             1                          4                                        opposite_x2     = `CORNERX1;
+    266             1                          4                                        opposite_y2     = `CORNERY1;
+    267             1                          4                                        which_corner = 2'b01;
+    268             1                          4                                        vga_x =     circle_vga_x;
+    269             1                          4                                        vga_y =     circle_vga_y;
+    270             1                          4                                        vga_colour= circle_vga_colour;
+    271             1                          4                                        vga_plot=   circle_vga_plot;
+    272             1                          4                                        done = 1'b0;
+    273                                                                            end 
+    274                                                             CIRCLE_WAIT3:  begin
+    275             1                          4                                        `SIGBUNDLE      = {1'b0  , 1'b0    , 3'b000   , 1'b0      , 1'b0        , 3'b100       , diameter  };
+    276             1                          4                                        circle_center_x = `CORNERX3;
+    277             1                          4                                        circle_center_y = `CORNERY3;
+    278                                                                                 //Opposing Corner 1
+    279             1                          4                                        opposite_x1     = `CORNERX2;
+    280             1                          4                                        opposite_y1     = `CORNERY2;
+    281                                                                                 //Opposing Corner 2
+    282             1                          4                                        opposite_x2     = `CORNERX1;
+    283             1                          4                                        opposite_y2     = `CORNERY1;
+    284             1                          4                                        which_corner = 2'b11;
+    285             1                          4                                        which_corner = 2'b00;
+    286             1                          4                                        vga_x =     circle_vga_x;
+    287             1                          4                                        vga_y =     circle_vga_y;
+    288             1                          4                                        vga_colour= circle_vga_colour;
+    289             1                          4                                        vga_plot=   circle_vga_plot;
+    290             1                          4                                        done = 1'b0;
+    291                                                                            end     
+    292                                                             CIRCLE_DRAW1:  begin
+    293             1                        896                                        `SIGBUNDLE      = {1'b0  , 1'b0    , 3'b000   , 1'b1      , 1'b1        , 3'b001       , diameter  };
+    294                                                                                 //x = 120 ; y = 83.1
+    295             1                        896                                        circle_center_x = `CORNERX1;
+    296             1                        896                                        circle_center_y = `CORNERY1;
+    297                                                                                 //Opposing Corner 1
+    298             1                        896                                        opposite_x1     = `CORNERX3;
+    299             1                        896                                        opposite_y1     = `CORNERY3;
+    300                                                                                 //Opposing Corner 2
+    301             1                        896                                        opposite_x2     = `CORNERX2;
+    302             1                        896                                        opposite_y2     = `CORNERY2;
+    303             1                        896                                        which_corner = 2'b10;
+    304             1                        896                                        vga_x =     circle_vga_x;
+    305             1                        896                                        vga_y =     circle_vga_y;
+    306             1                        896                                        vga_colour= circle_vga_colour;
+    307             1                        896                                        vga_plot=   circle_vga_plot;
+    308             1                        896                                        done = 1'b0;
+    309                                                                            end           
+    310                                                             CIRCLE_DRAW2:  begin
+    311             1                        896                                        `SIGBUNDLE      = {1'b0  , 1'b0    , 3'b000   , 1'b1      , 1'b1        , 3'b010       , diameter  };
+    312                                                                                 //x = 40 ; y = 83.1
+    313             1                        896                                        circle_center_x = `CORNERX2;
+    314             1                        896                                        circle_center_y = `CORNERY2;
+    315                                                                                 //Opposing Corner 1
+    316             1                        896                                        opposite_x1     = `CORNERX3;
+    317             1                        896                                        opposite_y1     = `CORNERY3;
+    318                                                                                 //Opposing Corner 2
+    319             1                        896                                        opposite_x2     = `CORNERX1;
+    320             1                        896                                        opposite_y2     = `CORNERY1;
+    321             1                        896                                        which_corner = 2'b01;
+    322             1                        896                                        vga_x =     circle_vga_x;
+    323             1                        896                                        vga_y =     circle_vga_y;
+    324             1                        896                                        vga_colour= circle_vga_colour;
+    325             1                        896                                        vga_plot=   circle_vga_plot;
+    326             1                        896                                        done = 1'b0;
+    327                                                                            end       
+    328                                                             CIRCLE_DRAW3:  begin
+    329             1                        894                                        `SIGBUNDLE      = {1'b0  , 1'b0    , 3'b000   , 1'b1      , 1'b1        , 3'b100       , diameter  };
+    330                                                                                 //x = 80  ; y = 13.8
+    331             1                        894                                        circle_center_x = `CORNERX3;
+    332             1                        894                                        circle_center_y = `CORNERY3;
+    333                                                                                 //Opposing Corner 1
+    334             1                        894                                        opposite_x1     = `CORNERX2;
+    335             1                        894                                        opposite_y1     = `CORNERY2;
+    336                                                                                 //Opposing Corner 2
+    337             1                        894                                        opposite_x2     = `CORNERX1;
+    338             1                        894                                        opposite_y2     = `CORNERY1;
+    339             1                        894                                        which_corner = 2'b11;
+    340             1                        894                                        vga_x =     circle_vga_x;
+    341             1                        894                                        vga_y =     circle_vga_y;
+    342             1                        894                                        vga_colour= circle_vga_colour;
+    343             1                        894                                        vga_plot=   circle_vga_plot;
+    344             1                        894                                        done = 1'b0;
+    345                                                                            end       
+    346                                                             DONE:          begin
+    347             1                          5                                        `SIGBUNDLE      = {1'b0  , 1'b0    , 3'b000   , 1'b0      , 1'b0        , 3'b111       , diameter  };
+    348             1                          5                                        circle_center_x = 16'd0;
+    349             1                          5                                        circle_center_y = 16'd0;
+    350             1                          5                                        opposite_x1     = 16'd0;
+    351             1                          5                                        opposite_y1     = 16'd0;
+    352             1                          5                                        opposite_x2     = 16'd0;
+    353             1                          5                                        opposite_y2     = 16'd0;
+    354             1                          5                                        which_corner = 2'b00;
+    355             1                          5                                        vga_x =     8'd0;
+    356             1                          5                                        vga_y =     7'd0;
+    357             1                          5                                        vga_colour= 3'd0;
+    358             1                          5                                        vga_plot=   1'd0;
+    359             1                          5                                        done = 1'b1;
+    360                                                                            end
+    361                                                        default:            begin
+    362             1                    ***0***                                        `SIGBUNDLE      = {1'b0  , 1'b0    , 3'b000   , 1'b0      , 1'b0        , 3'b111       , diameter  };
+    363             1                    ***0***                                        circle_center_x = 16'd0;
+    364             1                    ***0***                                        circle_center_y = 16'd0;
+    365             1                    ***0***                                        opposite_x1     = 16'd0;
+    366             1                    ***0***                                        opposite_y1     = 16'd0;
+    367             1                    ***0***                                        opposite_x2     = 16'd0;
+    368             1                    ***0***                                        opposite_y2     = 16'd0;
+    369             1                    ***0***                                        which_corner = 2'b00;
+    370             1                    ***0***                                        vga_x =     8'd0;
+    371             1                    ***0***                                        vga_y =     7'd0;
+    372             1                    ***0***                                        vga_colour= 3'd0;
+    373             1                    ***0***                                        vga_plot=   1'd0;
+    374             1                    ***0***                                        done = 1'b0;
+    375                                                                            end
+    376                                                             
+    377                                                        endcase
+    378                                                   end
+    379                                              
+    380                                              
+    381                                              endmodule
+    382                                              
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                        38        35         3     92.10
+
+================================Branch Details================================
+
+Branch Coverage for file reuleaux.sv --
+
+------------------------------------IF Branch------------------------------------
+    84                                        33     Count coming in to IF
+    84              1                          2               if(!rst_n) begin
+    87              1                         31               else 
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------CASE Branch------------------------------------
+    88                                        31     Count coming in to CASE
+    89              1                          3                    RESET_ST:
+    100             1                          4                    FILLBACKGROUND:
+    111             1                          4                    CIRCLE_DRAW1:
+    122             1                          4                    CIRCLE_DRAW2:
+    133             1                          4                    CIRCLE_DRAW3:
+    144             1                          2                    DONE:
+    148             1                          2                    CIRCLE_WAIT1:
+    159             1                          4                    CIRCLE_WAIT2:
+    170             1                          4                    CIRCLE_WAIT3:
+    181             1                    ***0***                    default:
+Branch totals: 9 hits of 10 branches = 90.00%
+
+------------------------------------IF Branch------------------------------------
+    91                                         3     Count coming in to IF
+    91              1                          2                         if(start == 1)
+    95              1                          1                         else 
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    102                                        4     Count coming in to IF
+    102             1                          2                         if(bg_done == 1)
+    106             1                          2                         else 
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    113                                        4     Count coming in to IF
+    113             1                          2                         if(circle_done == 1)
+    117             1                          2                         else 
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    124                                        4     Count coming in to IF
+    124             1                          2                         if(circle_done == 1)
+    128             1                          2                         else 
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    135                                        4     Count coming in to IF
+    135             1                          2                         if(circle_done == 1)
+    139             1                          2                         else 
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    150                                        2     Count coming in to IF
+    150             1                          2                         if(circle_done == 0)
+    154             1                    ***0***                         else 
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    161                                        4     Count coming in to IF
+    161             1                          2                         if(circle_done == 0)
+    165             1                          2                         else 
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    172                                        4     Count coming in to IF
+    172             1                          2                         if(circle_done == 0)
+    176             1                          2                         else 
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------CASE Branch------------------------------------
+    208                                    41110     Count coming in to CASE
+    210             1                          7                    RESET_ST:      begin
+    225             1                      38402                    FILLBACKGROUND:begin
+    240             1                          2                    CIRCLE_WAIT1:  begin
+    257             1                          4                    CIRCLE_WAIT2:  begin
+    274             1                          4                    CIRCLE_WAIT3:  begin
+    292             1                        896                    CIRCLE_DRAW1:  begin
+    310             1                        896                    CIRCLE_DRAW2:  begin
+    328             1                        894                    CIRCLE_DRAW3:  begin
+    346             1                          5                    DONE:          begin
+    361             1                    ***0***               default:            begin
+Branch totals: 9 hits of 10 branches = 90.00%
+
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                    517       327       190     63.24
+
+================================Toggle Details================================
+
+Toggle Coverage for File reuleaux.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+         21                                bg_plot           0           0                                0.00 
+         22                       bg_vga_colour[2]           0           0                                0.00 
+         22                       bg_vga_colour[1]           0           0                                0.00 
+         22                       bg_vga_colour[0]           0           0                                0.00 
+         22                           bg_colour[2]           0           0                                0.00 
+         22                           bg_colour[1]           0           0                                0.00 
+         22                           bg_colour[0]           0           0                                0.00 
+         42                       circle_radius[7]           0           0                                0.00 
+         42                       circle_radius[6]           0           1                               50.00 
+         42                       circle_radius[5]           0           0                                0.00 
+         42                       circle_radius[1]           1           0                               50.00 
+         42                       circle_radius[0]           0           0                                0.00 
+         45                        opposite_y2[18]           0           0                                0.00 
+         45                        opposite_y2[17]           0           0                                0.00 
+         45                        opposite_y2[12]           0           0                                0.00 
+         45                        opposite_y2[11]           0           0                                0.00 
+         45                         opposite_y2[0]           0           0                                0.00 
+         45                        opposite_y1[11]           0           0                                0.00 
+         45                         opposite_y1[0]           0           0                                0.00 
+         45                         opposite_x2[9]           0           0                                0.00 
+         45                         opposite_x2[8]           0           0                                0.00 
+         45                         opposite_x2[7]           0           0                                0.00 
+         45                         opposite_x2[6]           0           0                                0.00 
+         45                         opposite_x2[5]           0           0                                0.00 
+         45                         opposite_x2[4]           0           0                                0.00 
+         45                         opposite_x2[3]           0           0                                0.00 
+         45                         opposite_x2[2]           0           0                                0.00 
+         45                         opposite_x2[1]           0           0                                0.00 
+         45                        opposite_x2[10]           0           0                                0.00 
+         45                         opposite_x2[0]           0           0                                0.00 
+         45                         opposite_x1[9]           0           0                                0.00 
+         45                         opposite_x1[8]           0           0                                0.00 
+         45                         opposite_x1[7]           0           0                                0.00 
+         45                         opposite_x1[6]           0           0                                0.00 
+         45                         opposite_x1[5]           0           0                                0.00 
+         45                         opposite_x1[4]           0           0                                0.00 
+         45                         opposite_x1[3]           0           0                                0.00 
+         45                         opposite_x1[2]           0           0                                0.00 
+         45                         opposite_x1[1]           0           0                                0.00 
+         45                        opposite_x1[10]           0           0                                0.00 
+         45                         opposite_x1[0]           0           0                                0.00 
+         45                    circle_center_y[11]           0           0                                0.00 
+         45                     circle_center_y[0]           0           0                                0.00 
+         45                     circle_center_x[9]           0           0                                0.00 
+         45                     circle_center_x[8]           0           0                                0.00 
+         45                     circle_center_x[7]           0           0                                0.00 
+         45                     circle_center_x[6]           0           0                                0.00 
+         45                     circle_center_x[5]           0           0                                0.00 
+         45                     circle_center_x[4]           0           0                                0.00 
+         45                     circle_center_x[3]           0           0                                0.00 
+         45                     circle_center_x[2]           0           0                                0.00 
+         45                     circle_center_x[1]           0           0                                0.00 
+         45                    circle_center_x[10]           0           0                                0.00 
+         45                     circle_center_x[0]           0           0                                0.00 
+         80                             curr_state               ENUM type       Value       Count 
+        188                    sqrt3_6xdiameter[9]           0           0                                0.00 
+        188                    sqrt3_6xdiameter[8]           0           0                                0.00 
+        188                    sqrt3_6xdiameter[7]           0           0                                0.00 
+        188                    sqrt3_6xdiameter[6]           0           0                                0.00 
+        188                    sqrt3_6xdiameter[5]           0           0                                0.00 
+        188                    sqrt3_6xdiameter[4]           0           0                                0.00 
+        188                    sqrt3_6xdiameter[3]           0           0                                0.00 
+        188                    sqrt3_6xdiameter[2]           0           0                                0.00 
+        188                   sqrt3_6xdiameter[29]           0           0                                0.00 
+        188                   sqrt3_6xdiameter[28]           0           0                                0.00 
+        188                   sqrt3_6xdiameter[26]           0           1                               50.00 
+        188                   sqrt3_6xdiameter[24]           0           1                               50.00 
+        188                   sqrt3_6xdiameter[23]           1           0                               50.00 
+        188                   sqrt3_6xdiameter[22]           0           0                                0.00 
+        188                   sqrt3_6xdiameter[21]           0           0                                0.00 
+        188                    sqrt3_6xdiameter[1]           0           0                                0.00 
+        188                   sqrt3_6xdiameter[19]           1           0                               50.00 
+        188                   sqrt3_6xdiameter[17]           0           1                               50.00 
+        188                   sqrt3_6xdiameter[16]           1           0                               50.00 
+        188                   sqrt3_6xdiameter[14]           0           0                                0.00 
+        188                   sqrt3_6xdiameter[13]           0           1                               50.00 
+        188                   sqrt3_6xdiameter[12]           1           0                               50.00 
+        188                   sqrt3_6xdiameter[11]           0           0                                0.00 
+        188                   sqrt3_6xdiameter[10]           0           0                                0.00 
+        188                    sqrt3_6xdiameter[0]           0           0                                0.00 
+        189                    sqrt3_3xdiameter[9]           0           0                                0.00 
+        189                    sqrt3_3xdiameter[8]           0           0                                0.00 
+        189                    sqrt3_3xdiameter[7]           0           0                                0.00 
+        189                    sqrt3_3xdiameter[6]           0           0                                0.00 
+        189                    sqrt3_3xdiameter[5]           0           0                                0.00 
+        189                    sqrt3_3xdiameter[4]           0           0                                0.00 
+        189                    sqrt3_3xdiameter[3]           0           0                                0.00 
+        189                    sqrt3_3xdiameter[2]           0           0                                0.00 
+        189                   sqrt3_3xdiameter[29]           0           0                                0.00 
+        189                   sqrt3_3xdiameter[27]           0           1                               50.00 
+        189                   sqrt3_3xdiameter[25]           0           1                               50.00 
+        189                   sqrt3_3xdiameter[24]           1           0                               50.00 
+        189                   sqrt3_3xdiameter[23]           0           0                                0.00 
+        189                   sqrt3_3xdiameter[22]           0           0                                0.00 
+        189                   sqrt3_3xdiameter[20]           1           0                               50.00 
+        189                    sqrt3_3xdiameter[1]           0           0                                0.00 
+        189                   sqrt3_3xdiameter[18]           0           1                               50.00 
+        189                   sqrt3_3xdiameter[17]           1           0                               50.00 
+        189                   sqrt3_3xdiameter[15]           0           0                                0.00 
+        189                   sqrt3_3xdiameter[14]           0           1                               50.00 
+        189                   sqrt3_3xdiameter[13]           1           0                               50.00 
+        189                   sqrt3_3xdiameter[12]           0           0                                0.00 
+        189                   sqrt3_3xdiameter[11]           0           0                                0.00 
+        189                   sqrt3_3xdiameter[10]           0           0                                0.00 
+        189                    sqrt3_3xdiameter[0]           0           0                                0.00 
+
+Total Node Count     =        263 
+Toggled Node Count   =        159 
+Untoggled Node Count =        104 
+
+Toggle Coverage      =      63.24% (327 of 517 bins)
+
+=================================================================================
+=== File: tb_reuleaux.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           33        33         0    100.00
+
+================================Statement Details================================
+
+Statement Coverage for file tb_reuleaux.sv --
+
+    1                                                `timescale 1ps/1ps
+    2                                                module tb_reuleaux();
+    3                                                
+    4                                                
+    5                                                logic clk = 0;
+    6                                                logic rst_n; 
+    7                                                logic [2:0] colour;
+    8                                                logic [7:0] centre_x; 
+    9                                                logic [6:0] centre_y; 
+    10                                               logic [7:0] diameter;
+    11                                               logic start;
+    12                                               logic done;
+    13                                               logic [7:0] vga_x; 
+    14                                               logic [6:0] vga_y;
+    15                                               logic [2:0] vga_colour; 
+    16                                               logic vga_plot;
+    17                                               
+    18                                               reuleaux dut(.*);
+    19              1                      83493     always #5 clk = ~clk;  // Create clock with period=10
+    19              2                      83492     
+    20                                               
+    21                                               initial begin
+    22              1                          1         rst_n = 0;
+    23              1                          1         start = 0;
+    24              1                          1         #10;
+    25              1                          1         rst_n = 1;
+    26                                               
+    27              1                          1         #10;
+    28                                               
+    29                                                   //Normal usecase for circle
+    30              1                          1         centre_x = 40;
+    31              1                          1         centre_y = 30;
+    32              1                          1         diameter = 38;
+    33              1                          1         start = 1;
+    34                                               
+    35              1                          1         wait(done == 1);
+    36                                               
+    37              1                          1         rst_n = 0;
+    38              1                          1         start = 0;
+    39              1                          1         #10;
+    40              1                          1         rst_n = 1;
+    41                                               
+    42                                                   //Test drawing a circle that is as wide as the screen
+    43              1                          1         centre_x = 80;
+    44              1                          1         centre_y = 60;
+    45              1                          1         diameter = 120;
+    46              1                          1         start = 1;
+    47                                               
+    48              1                          1         wait(done == 1);
+    49                                               
+    50              1                          1         rst_n = 0;
+    51              1                          1         start = 0;
+    52              1                          1         #10;
+    53              1                          1         rst_n = 1;
+    54                                               
+    55                                                   //Test Drawing a circle on the edge
+    56              1                          1         centre_x = 0;
+    57              1                          1         centre_y = 0;
+    58              1                          1         diameter = 100;
+    59              1                          1         start = 1;
+    60                                               
+    61              1                          1         wait(done == 1);
+    62                                               
+    63                                                   //To test state machine staying in done state
+    64              1                          1         #100;
+    65                                                   //Confirm done is still high
+    66              1                          1         wait(done == 1);
+    67                                               
+    68              1                          1         $stop;
+    69                                               end
+    70                                               
+    71                                               endmodule: tb_reuleaux
+    72                                               
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                     92        66        26     71.73
+
+================================Toggle Details================================
+
+Toggle Coverage for File tb_reuleaux.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+          8                            centre_x[7]           0           0                                0.00 
+          8                            centre_x[5]           1           0                               50.00 
+          8                            centre_x[3]           1           0                               50.00 
+          8                            centre_x[2]           0           0                                0.00 
+          8                            centre_x[1]           0           0                                0.00 
+          8                            centre_x[0]           0           0                                0.00 
+          9                            centre_y[6]           0           0                                0.00 
+          9                            centre_y[4]           1           0                               50.00 
+          9                            centre_y[3]           1           0                               50.00 
+          9                            centre_y[2]           1           0                               50.00 
+          9                            centre_y[1]           1           0                               50.00 
+          9                            centre_y[0]           0           0                                0.00 
+         10                            diameter[7]           0           0                                0.00 
+         10                            diameter[6]           0           1                               50.00 
+         10                            diameter[5]           0           0                                0.00 
+         10                            diameter[1]           1           0                               50.00 
+         10                            diameter[0]           0           0                                0.00 
+
+Total Node Count     =         46 
+Toggled Node Count   =         29 
+Untoggled Node Count =         17 
+
+Toggle Coverage      =      71.73% (66 of 92 bins)
+
+
+Total Coverage By File (code coverage only, filtered view): 84.15%
+

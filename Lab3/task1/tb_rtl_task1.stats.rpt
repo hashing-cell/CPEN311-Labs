@@ -1,0 +1,557 @@
+Coverage Report by file with details
+
+=================================================================================
+=== File: ../memories/s_mem.v
+=================================================================================
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                     68        68         0    100.00
+
+================================Toggle Details================================
+
+Toggle Coverage for File ../memories/s_mem.v --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+
+Total Node Count     =         34 
+Toggled Node Count   =         34 
+Untoggled Node Count =          0 
+
+Toggle Coverage      =     100.00% (68 of 68 bins)
+
+=================================================================================
+=== File: init.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           33        30         3     90.90
+
+================================Statement Details================================
+
+Statement Coverage for file init.sv --
+
+    1                                                module init(input logic clk, input logic rst_n,
+    2                                                            input logic en, output logic rdy,
+    3                                                            output logic [7:0] addr, output logic [7:0] wrdata, output logic wren);
+    4                                                    
+    5                                                	typedef enum { 
+    6                                                		WAIT_ENABLE,
+    7                                                        WRITE,
+    8                                                        INCREMENT,
+    9                                                        WRITE_CHECK_DONE,
+    10                                                       HALT
+    11                                               	} state_t;
+    12                                               
+    13                                                   state_t curr_state;
+    14                                                   state_t next_state;
+    15                                               
+    16                                                   logic [8:0] next_num;
+    17                                               
+    18                                                   logic update_num;
+    19                                               
+    20                                                   logic start;
+    21                                               
+    22                                                   // STATE MACHINE CLOCK LOGIC BLOCK
+    23              1                        772         always_ff @(posedge clk) begin
+    24                                                       if (!rst_n) begin
+    25              1                          1                 curr_state <= WAIT_ENABLE;
+    26              1                          1                 rdy <= 1;
+    27              1                          1                 start <= 0;
+    28                                                       end 
+    29                                                       else if (en) begin
+    30              1                          1                 start <= 1;
+    31                                                       end
+    32                                                       else if (start) begin
+    33              1                        769                 rdy <= 0;
+    34              1                        769     			curr_state <= next_state;
+    35                                                       end
+    36                                                   end
+    37                                               
+    38                                                   // NEXT NUM REGISTER LOGIC BLOCK
+    39              1                        514         always_ff @(posedge clk) begin
+    40                                                       if (!rst_n)
+    41              1                          1                 next_num <= 0;
+    42                                                       else if (update_num)
+    43              1                        256                 next_num <= next_num + 1;
+    44                                                   end
+    45                                               
+    46              1                        772         always_comb begin
+    47                                                       case (curr_state)
+    48                                                           WAIT_ENABLE: begin
+    49              1                          3                     update_num = 0;
+    50              1                          3                     wren = 0;
+    51                                                               if (start) 
+    52              1                          1                         next_state = WRITE;
+    53                                                               else
+    54              1                          2                         next_state = WAIT_ENABLE;
+    55                                                           end
+    56                                                           WRITE: begin
+    57              1                        256                     update_num = 0;
+    58              1                        256                     wren = 1;
+    59              1                        256                     next_state = INCREMENT;
+    60                                                           end
+    61                                                           INCREMENT: begin
+    62              1                        256                     update_num = 1;
+    63              1                        256                     wren = 0;
+    64              1                        256                     next_state = WRITE_CHECK_DONE;
+    65                                                           end
+    66                                                           WRITE_CHECK_DONE: begin
+    67              1                        256                     update_num = 0;
+    68              1                        256                     wren = 0;
+    69                                                               if (next_num > 255) 
+    70              1                          1                         next_state = HALT;
+    71                                                               else
+    72              1                        255                         next_state = WRITE;
+    73                                                           end
+    74                                                           HALT: begin
+    75              1                          1                     update_num = 0;
+    76              1                          1                     wren = 0;
+    77                                                               // We stay in halt state forever since we only init once
+    78              1                          1                     next_state = HALT;
+    79                                                           end
+    80                                                           default: begin
+    81                                                               //panic
+    82              1                    ***0***                     update_num = 0;
+    83              1                    ***0***                     wren = 0;
+    84              1                    ***0***                     next_state = WAIT_ENABLE;
+    85                                                           end
+    86                                                       endcase
+    87              1                        772             wrdata = next_num;
+    88              1                        772             addr = next_num;
+    89                                                   end
+    90                                               
+    91                                               endmodule: init
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                        17        16         1     94.11
+
+================================Branch Details================================
+
+Branch Coverage for file init.sv --
+
+------------------------------------IF Branch------------------------------------
+    24                                       772     Count coming in to IF
+    24              1                          1             if (!rst_n) begin
+    29              1                          1             else if (en) begin
+    32              1                        769             else if (start) begin
+                                               1     All False Count
+Branch totals: 4 hits of 4 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    40                                       514     Count coming in to IF
+    40              1                          1             if (!rst_n)
+    42              1                        256             else if (update_num)
+                                             257     All False Count
+Branch totals: 3 hits of 3 branches = 100.00%
+
+------------------------------------CASE Branch------------------------------------
+    47                                       772     Count coming in to CASE
+    48              1                          3                 WAIT_ENABLE: begin
+    56              1                        256                 WRITE: begin
+    61              1                        256                 INCREMENT: begin
+    66              1                        256                 WRITE_CHECK_DONE: begin
+    74              1                          1                 HALT: begin
+    80              1                    ***0***                 default: begin
+Branch totals: 5 hits of 6 branches = 83.33%
+
+------------------------------------IF Branch------------------------------------
+    51                                         3     Count coming in to IF
+    51              1                          1                     if (start) 
+    53              1                          2                     else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    69                                       256     Count coming in to IF
+    69              1                          1                     if (next_num > 255) 
+    71              1                        255                     else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                     68        63         5     92.64
+
+================================Toggle Details================================
+
+Toggle Coverage for File init.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+          2                                    rdy           1           0                               50.00 
+         13                             curr_state               ENUM type       Value       Count 
+                                                               WAIT_ENABLE           0        0.00 
+         14                             next_state               ENUM type       Value       Count 
+                                                               WAIT_ENABLE           0        0.00 
+         16                            next_num[8]           0           1                               50.00 
+         20                                  start           0           1                               50.00 
+
+Total Node Count     =         39 
+Toggled Node Count   =         34 
+Untoggled Node Count =          5 
+
+Toggle Coverage      =      92.64% (63 of 68 bins)
+
+=================================================================================
+=== File: task1.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           12        10         2     83.33
+
+================================Statement Details================================
+
+Statement Coverage for file task1.sv --
+
+    1                                                module task1(input logic CLOCK_50, input logic [3:0] KEY, input logic [9:0] SW,
+    2                                                             output logic [6:0] HEX0, output logic [6:0] HEX1, output logic [6:0] HEX2,
+    3                                                             output logic [6:0] HEX3, output logic [6:0] HEX4, output logic [6:0] HEX5,
+    4                                                             output logic [9:0] LEDR);
+    5                                                    logic [7:0] addr;
+    6                                                    logic [7:0] wrdata;
+    7                                                    logic rdy;
+    8                                                    logic en;
+    9                                                    logic wren;
+    10                                               
+    11                                                   typedef enum { 
+    12                                               		RESET,
+    13                                                       ASSERT_EN,
+    14                                                       DEASSERT_EN
+    15                                               	} state_t;
+    16                                               
+    17                                                   state_t curr_state;
+    18                                                   state_t next_state;
+    19                                               
+    20                                                   // mainly for testing, this value can show output of s_mem
+    21                                                   logic [7:0] q;
+    22                                                   assign LEDR[7:0] = q;
+    23                                                   assign LEDR[9:8] = 2'b00;
+    24                                               
+    25              1                          3         always_ff @(posedge CLOCK_50) begin
+    26                                                       if (!KEY[3])
+    27              1                          1                 curr_state <= RESET;
+    28                                                       else
+    29              1                          2                 curr_state <= next_state;
+    30                                                   end
+    31                                               
+    32              1                          3         always_comb begin
+    33                                                       case (curr_state)
+    34                                                           RESET: begin
+    35              1                          1                     en = 0;
+    36              1                          1                     next_state = ASSERT_EN;
+    37                                                           end
+    38                                                           ASSERT_EN: begin
+    39              1                          1                     en = 1;
+    40              1                          1                     next_state = DEASSERT_EN;
+    41                                                           end
+    42                                                           DEASSERT_EN: begin
+    43              1                          1                     en = 0;
+    44              1                          1                     next_state = DEASSERT_EN; //stay in this state forever
+    45                                                           end
+    46                                                           default: begin
+    47                                                               //panic
+    48              1                    ***0***                     en = 0;
+    49              1                    ***0***                     next_state = RESET;
+    50                                                           end
+    51                                                       endcase
+    52                                                   end
+    53                                               
+    54                                                   s_mem s(addr, CLOCK_50, wrdata, wren, q);
+    55                                               
+    56                                                   init i(CLOCK_50, KEY[3], en, rdy, addr, wrdata, wren);
+    57                                               endmodule: task1
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                         6         5         1     83.33
+
+================================Branch Details================================
+
+Branch Coverage for file task1.sv --
+
+------------------------------------IF Branch------------------------------------
+    26                                         3     Count coming in to IF
+    26              1                          1             if (!KEY[3])
+    28              1                          2             else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------CASE Branch------------------------------------
+    33                                         3     Count coming in to CASE
+    34              1                          1                 RESET: begin
+    38              1                          1                 ASSERT_EN: begin
+    42              1                          1                 DEASSERT_EN: begin
+    46              1                    ***0***                 default: begin
+Branch totals: 3 hits of 4 branches = 75.00%
+
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                     80        73         7     91.25
+
+================================Toggle Details================================
+
+Toggle Coverage for File task1.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+          4                                LEDR[9]           0           0                                0.00 
+          4                                LEDR[8]           0           0                                0.00 
+          7                                    rdy           1           0                               50.00 
+         17                             curr_state               ENUM type       Value       Count 
+                                                                     RESET           0        0.00 
+         18                             next_state               ENUM type       Value       Count 
+                                                                     RESET           0        0.00 
+
+Total Node Count     =         43 
+Toggled Node Count   =         38 
+Untoggled Node Count =          5 
+
+Toggle Coverage      =      91.25% (73 of 80 bins)
+
+=================================================================================
+=== File: tb_rtl_task1.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           18        15         3     83.33
+
+================================Statement Details================================
+
+Statement Coverage for file tb_rtl_task1.sv --
+
+    1                                                `timescale 1ps / 1ps
+    2                                                
+    3                                                module tb_rtl_task1();
+    4                                                    logic CLOCK_50;
+    5                                                    logic [3:0] KEY;
+    6                                                    logic [9:0] SW;
+    7                                                    logic [6:0] HEX0;
+    8                                                    logic [6:0] HEX1;
+    9                                                    logic [6:0] HEX2;
+    10                                                   logic [6:0] HEX3;
+    11                                                   logic [6:0] HEX4; 
+    12                                                   logic [6:0] HEX5;
+    13                                                   logic [9:0] LEDR;
+    14                                               
+    15                                                   task1 DUT(.*);
+    16                                               
+    17              1                       2001         always #5 CLOCK_50 = ~CLOCK_50;  // Create clock with period=10
+    17              2                       2000     
+    18                                               
+    19                                                   integer check_array[0:255];
+    20                                                   integer check_array_idx;
+    21                                               
+    22                                                   integer idx;
+    23                                               
+    24                                                   logic err;
+    25                                               
+    26                                                   // Fill the array which will be used to check against the results of the DUT
+    27                                                   // This represents the pseudo-code of the given assignment
+    28                                                   initial begin
+    29              1                          1             for (check_array_idx = 0; check_array_idx < 256; check_array_idx += 1) begin
+    29              2                        256     
+    30              1                        256                 check_array[check_array_idx] = check_array_idx;
+    31                                                       end
+    32                                                   end
+    33                                               
+    34                                                   // This task will compare the data in the actual memory with the check_array
+    35                                                   task verify_memory_data();
+    36              1                          1             for (idx = 0; idx < 256; idx += 1) begin
+    36              2                        256     
+    37                                                           if (check_array[idx] != DUT.s.altsyncram_component.m_default.altsyncram_inst.mem_data[idx]) begin
+    38              1                    ***0***                     $display("Discrepancy found at idx %d, expected %d, actual is %d", idx, check_array[idx], 
+    39                                                                   DUT.s.altsyncram_component.m_default.altsyncram_inst.mem_data[idx]);
+    40              1                    ***0***                     err = 1;
+    41                                                           end
+    42                                                       end
+    43                                                   endtask
+    44                                               
+    45                                                   initial begin
+    46              1                          1             CLOCK_50 = 0;
+    47              1                          1             KEY[3:0] = 0;
+    48              1                          1             err = 0;
+    49                                               
+    50              1                          1             #10;
+    51                                               
+    52                                                       //Deassert reset and it should start initialization automatically
+    53              1                          1             KEY[3] = 1;
+    54                                               
+    55              1                          1             #8000; //After this amount of time the DUT should be finished
+    56                                               
+    57                                                       // Check if memory holds expected values
+    58              1                          1             verify_memory_data();
+    59                                               
+    60                                                       if (err)
+    61              1                    ***0***                 $display("Tests failed");
+    62                                                       else
+    63              1                          1                 $display("Tests passed");
+    64                                               
+    65                                                   end
+    66                                               
+    67                                               endmodule: tb_rtl_task1
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                         4         2         2     50.00
+
+================================Branch Details================================
+
+Branch Coverage for file tb_rtl_task1.sv --
+
+------------------------------------IF Branch------------------------------------
+    37                                       256     Count coming in to IF
+    37              1                    ***0***                 if (check_array[idx] != DUT.s.altsyncram_component.m_default.altsyncram_inst.mem_data[idx]) begin
+                                             256     All False Count
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    60                                         1     Count coming in to IF
+    60              1                    ***0***             if (err)
+    62              1                          1             else
+Branch totals: 1 hit of 2 branches = 50.00%
+
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                    244        19       225      7.78
+
+================================Toggle Details================================
+
+Toggle Coverage for File tb_rtl_task1.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+          5                                 KEY[3]           0           1                               50.00 
+          5                                 KEY[2]           0           0                                0.00 
+          5                                 KEY[1]           0           0                                0.00 
+          5                                 KEY[0]           0           0                                0.00 
+          7                                HEX0[6]           0           0                                0.00 
+          7                                HEX0[5]           0           0                                0.00 
+          7                                HEX0[4]           0           0                                0.00 
+          7                                HEX0[3]           0           0                                0.00 
+          7                                HEX0[2]           0           0                                0.00 
+          7                                HEX0[1]           0           0                                0.00 
+          7                                HEX0[0]           0           0                                0.00 
+          8                                HEX1[6]           0           0                                0.00 
+          8                                HEX1[5]           0           0                                0.00 
+          8                                HEX1[4]           0           0                                0.00 
+          8                                HEX1[3]           0           0                                0.00 
+          8                                HEX1[2]           0           0                                0.00 
+          8                                HEX1[1]           0           0                                0.00 
+          8                                HEX1[0]           0           0                                0.00 
+          9                                HEX2[6]           0           0                                0.00 
+          9                                HEX2[5]           0           0                                0.00 
+          9                                HEX2[4]           0           0                                0.00 
+          9                                HEX2[3]           0           0                                0.00 
+          9                                HEX2[2]           0           0                                0.00 
+          9                                HEX2[1]           0           0                                0.00 
+          9                                HEX2[0]           0           0                                0.00 
+         10                                HEX3[6]           0           0                                0.00 
+         10                                HEX3[5]           0           0                                0.00 
+         10                                HEX3[4]           0           0                                0.00 
+         10                                HEX3[3]           0           0                                0.00 
+         10                                HEX3[2]           0           0                                0.00 
+         10                                HEX3[1]           0           0                                0.00 
+         10                                HEX3[0]           0           0                                0.00 
+         11                                HEX4[6]           0           0                                0.00 
+         11                                HEX4[5]           0           0                                0.00 
+         11                                HEX4[4]           0           0                                0.00 
+         11                                HEX4[3]           0           0                                0.00 
+         11                                HEX4[2]           0           0                                0.00 
+         11                                HEX4[1]           0           0                                0.00 
+         11                                HEX4[0]           0           0                                0.00 
+         12                                HEX5[6]           0           0                                0.00 
+         12                                HEX5[5]           0           0                                0.00 
+         12                                HEX5[4]           0           0                                0.00 
+         12                                HEX5[3]           0           0                                0.00 
+         12                                HEX5[2]           0           0                                0.00 
+         12                                HEX5[1]           0           0                                0.00 
+         12                                HEX5[0]           0           0                                0.00 
+         13                                LEDR[9]           0           0                                0.00 
+         13                                LEDR[8]           0           0                                0.00 
+         20                     check_array_idx[9]           0           0                                0.00 
+         20                     check_array_idx[8]           0           0                                0.00 
+         20                     check_array_idx[7]           0           0                                0.00 
+         20                     check_array_idx[6]           0           0                                0.00 
+         20                     check_array_idx[5]           0           0                                0.00 
+         20                     check_array_idx[4]           0           0                                0.00 
+         20                     check_array_idx[3]           0           0                                0.00 
+         20                    check_array_idx[31]           0           0                                0.00 
+         20                    check_array_idx[30]           0           0                                0.00 
+         20                     check_array_idx[2]           0           0                                0.00 
+         20                    check_array_idx[29]           0           0                                0.00 
+         20                    check_array_idx[28]           0           0                                0.00 
+         20                    check_array_idx[27]           0           0                                0.00 
+         20                    check_array_idx[26]           0           0                                0.00 
+         20                    check_array_idx[25]           0           0                                0.00 
+         20                    check_array_idx[24]           0           0                                0.00 
+         20                    check_array_idx[23]           0           0                                0.00 
+         20                    check_array_idx[22]           0           0                                0.00 
+         20                    check_array_idx[21]           0           0                                0.00 
+         20                    check_array_idx[20]           0           0                                0.00 
+         20                     check_array_idx[1]           0           0                                0.00 
+         20                    check_array_idx[19]           0           0                                0.00 
+         20                    check_array_idx[18]           0           0                                0.00 
+         20                    check_array_idx[17]           0           0                                0.00 
+         20                    check_array_idx[16]           0           0                                0.00 
+         20                    check_array_idx[15]           0           0                                0.00 
+         20                    check_array_idx[14]           0           0                                0.00 
+         20                    check_array_idx[13]           0           0                                0.00 
+         20                    check_array_idx[12]           0           0                                0.00 
+         20                    check_array_idx[11]           0           0                                0.00 
+         20                    check_array_idx[10]           0           0                                0.00 
+         20                     check_array_idx[0]           0           0                                0.00 
+         22                                 idx[9]           0           0                                0.00 
+         22                                 idx[8]           0           0                                0.00 
+         22                                 idx[7]           0           0                                0.00 
+         22                                 idx[6]           0           0                                0.00 
+         22                                 idx[5]           0           0                                0.00 
+         22                                 idx[4]           0           0                                0.00 
+         22                                 idx[3]           0           0                                0.00 
+         22                                idx[31]           0           0                                0.00 
+         22                                idx[30]           0           0                                0.00 
+         22                                 idx[2]           0           0                                0.00 
+         22                                idx[29]           0           0                                0.00 
+         22                                idx[28]           0           0                                0.00 
+         22                                idx[27]           0           0                                0.00 
+         22                                idx[26]           0           0                                0.00 
+         22                                idx[25]           0           0                                0.00 
+         22                                idx[24]           0           0                                0.00 
+         22                                idx[23]           0           0                                0.00 
+         22                                idx[22]           0           0                                0.00 
+         22                                idx[21]           0           0                                0.00 
+         22                                idx[20]           0           0                                0.00 
+         22                                 idx[1]           0           0                                0.00 
+         22                                idx[19]           0           0                                0.00 
+         22                                idx[18]           0           0                                0.00 
+         22                                idx[17]           0           0                                0.00 
+         22                                idx[16]           0           0                                0.00 
+         22                                idx[15]           0           0                                0.00 
+         22                                idx[14]           0           0                                0.00 
+         22                                idx[13]           0           0                                0.00 
+         22                                idx[12]           0           0                                0.00 
+         22                                idx[11]           0           0                                0.00 
+         22                                idx[10]           0           0                                0.00 
+         22                                 idx[0]           0           0                                0.00 
+         24                                    err           0           0                                0.00 
+
+Total Node Count     =        122 
+Toggled Node Count   =          9 
+Untoggled Node Count =        113 
+
+Toggle Coverage      =       7.78% (19 of 244 bins)
+
+
+Total Coverage By File (code coverage only, filtered view): 73.65%
+

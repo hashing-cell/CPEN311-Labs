@@ -1,0 +1,404 @@
+Coverage Report by file with details
+
+=================================================================================
+=== File: init.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           33        30         3     90.90
+
+================================Statement Details================================
+
+Statement Coverage for file init.sv --
+
+    1                                                module init(input logic clk, input logic rst_n,
+    2                                                            input logic en, output logic rdy,
+    3                                                            output logic [7:0] addr, output logic [7:0] wrdata, output logic wren);
+    4                                                    
+    5                                                	typedef enum { 
+    6                                                		WAIT_ENABLE,
+    7                                                        WRITE,
+    8                                                        INCREMENT,
+    9                                                        WRITE_CHECK_DONE,
+    10                                                       HALT
+    11                                               	} state_t;
+    12                                               
+    13                                                   state_t curr_state;
+    14                                                   state_t next_state;
+    15                                               
+    16                                                   logic [8:0] next_num;
+    17                                               
+    18                                                   logic update_num;
+    19                                               
+    20                                                   logic start;
+    21                                               
+    22                                                   // STATE MACHINE CLOCK LOGIC BLOCK
+    23              1                        774         always_ff @(posedge clk or negedge en) begin
+    24                                                       if (!rst_n) begin
+    25              1                          2                 curr_state <= WAIT_ENABLE;
+    26              1                          2                 rdy <= 1;
+    27              1                          2                 start <= 0;
+    28                                                       end 
+    29                                                       else if (en && rdy)
+    30              1                          1                 start <= 1;
+    31                                                       else if (start && !en && rdy)
+    32              1                          1                 rdy <= 0;
+    33                                                       else if (!rdy)
+    34              1                        769     			curr_state <= next_state;
+    35                                                   end
+    36                                               
+    37                                                   // NEXT NUM REGISTER LOGIC BLOCK
+    38              1                        514         always_ff @(posedge clk) begin
+    39                                                       if (!rst_n)
+    40              1                          1                 next_num <= 0;
+    41                                                       else if (update_num)
+    42              1                        256                 next_num <= next_num + 1;
+    43                                                   end
+    44                                               
+    45              1                        773         always_comb begin
+    46                                                       case (curr_state)
+    47                                                           WAIT_ENABLE: begin
+    48              1                          4                     update_num = 0;
+    49              1                          4                     wren = 0;
+    50                                                               if (start) 
+    51              1                          1                         next_state = WRITE;
+    52                                                               else
+    53              1                          3                         next_state = WAIT_ENABLE;
+    54                                                           end
+    55                                                           WRITE: begin
+    56              1                        256                     update_num = 0;
+    57              1                        256                     wren = 1;
+    58              1                        256                     next_state = INCREMENT;
+    59                                                           end
+    60                                                           INCREMENT: begin
+    61              1                        256                     update_num = 1;
+    62              1                        256                     wren = 0;
+    63              1                        256                     next_state = WRITE_CHECK_DONE;
+    64                                                           end
+    65                                                           WRITE_CHECK_DONE: begin
+    66              1                        256                     update_num = 0;
+    67              1                        256                     wren = 0;
+    68                                                               if (next_num > 255) 
+    69              1                          1                         next_state = HALT;
+    70                                                               else
+    71              1                        255                         next_state = WRITE;
+    72                                                           end
+    73                                                           HALT: begin
+    74              1                          1                     update_num = 0;
+    75              1                          1                     wren = 0;
+    76                                                               // We stay in halt state forever since we only init once
+    77              1                          1                     next_state = HALT;
+    78                                                           end
+    79                                                           default: begin
+    80                                                               //panic
+    81              1                    ***0***                     update_num = 0;
+    82              1                    ***0***                     wren = 0;
+    83              1                    ***0***                     next_state = WAIT_ENABLE;
+    84                                                           end
+    85                                                       endcase
+    86              1                        773             wrdata = next_num;
+    87              1                        773             addr = next_num;
+    88                                                   end
+    89                                               
+    90                                               endmodule: init
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                        18        17         1     94.44
+
+================================Branch Details================================
+
+Branch Coverage for file init.sv --
+
+------------------------------------IF Branch------------------------------------
+    24                                       774     Count coming in to IF
+    24              1                          2             if (!rst_n) begin
+    29              1                          1             else if (en && rdy)
+    31              1                          1             else if (start && !en && rdy)
+    33              1                        769             else if (!rdy)
+                                               1     All False Count
+Branch totals: 5 hits of 5 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    39                                       514     Count coming in to IF
+    39              1                          1             if (!rst_n)
+    41              1                        256             else if (update_num)
+                                             257     All False Count
+Branch totals: 3 hits of 3 branches = 100.00%
+
+------------------------------------CASE Branch------------------------------------
+    46                                       773     Count coming in to CASE
+    47              1                          4                 WAIT_ENABLE: begin
+    55              1                        256                 WRITE: begin
+    60              1                        256                 INCREMENT: begin
+    65              1                        256                 WRITE_CHECK_DONE: begin
+    73              1                          1                 HALT: begin
+    79              1                    ***0***                 default: begin
+Branch totals: 5 hits of 6 branches = 83.33%
+
+------------------------------------IF Branch------------------------------------
+    50                                         4     Count coming in to IF
+    50              1                          1                     if (start) 
+    52              1                          3                     else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    68                                       256     Count coming in to IF
+    68              1                          1                     if (next_num > 255) 
+    70              1                        255                     else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                     68        63         5     92.64
+
+================================Toggle Details================================
+
+Toggle Coverage for File init.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+          2                                    rdy           1           0                               50.00 
+         13                             curr_state               ENUM type       Value       Count 
+                                                               WAIT_ENABLE           0        0.00 
+         14                             next_state               ENUM type       Value       Count 
+                                                               WAIT_ENABLE           0        0.00 
+         16                            next_num[8]           0           1                               50.00 
+         20                                  start           0           1                               50.00 
+
+Total Node Count     =         39 
+Toggled Node Count   =         34 
+Untoggled Node Count =          5 
+
+Toggle Coverage      =      92.64% (63 of 68 bins)
+
+=================================================================================
+=== File: tb_rtl_init.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           39        27        12     69.23
+
+================================Statement Details================================
+
+Statement Coverage for file tb_rtl_init.sv --
+
+    1                                                `timescale 1ps / 1ps
+    2                                                
+    3                                                module tb_rtl_init();
+    4                                                    logic clk; 
+    5                                                    logic rst_n;
+    6                                                    logic en; 
+    7                                                    logic rdy;
+    8                                                    logic [7:0] addr; 
+    9                                                    logic [7:0] wrdata; 
+    10                                                   logic wren;
+    11                                               
+    12                                                   init DUT(.*);
+    13                                               
+    14                                                   integer check_array[0:255];
+    15                                                   integer check_array_idx;
+    16                                               
+    17                                                   integer wren_count;
+    18                                               
+    19                                                   // Fill the array which will be used to check against the results of the DUT
+    20                                                   // This represents the pseudo-code of the given assignment
+    21                                                   initial begin
+    22              1                          1             for (check_array_idx = 0; check_array_idx < 256; check_array_idx += 1) begin
+    22              2                        256     
+    23              1                        256                 check_array[check_array_idx] = check_array_idx;
+    24                                                       end
+    25                                                   end
+    26                                               
+    27                                                   // Store all wrdata and addr results in an array, and then check them
+    28                                                   initial begin
+    29              1                          1             wren_count = 0;
+    30              1                          1             forever begin
+    31              1                        257                 wait(wren == 1);
+    32                                                           if (addr != wren_count) begin
+    33              1                    ***0***                     $display("ERROR: At Wren = 1, Address is %d, expected address %d", addr, wren_count);
+    34              1                    ***0***                     $display("Error occured at simulation time ", $time);
+    35              1                    ***0***                     $stop;
+    36                                                           end
+    37                                                           if (wrdata != check_array[wren_count]) begin
+    38              1                    ***0***                     $display("ERROR: At Wren = 1, Wrdata is %d, expected wrdata %d", wrdata, check_array[wren_count]);
+    39              1                    ***0***                     $display("Error occured at simulation time ", $time);
+    40              1                    ***0***                     $stop;
+    41                                                           end
+    42              1                        256                 wren_count += 1;
+    43              1                        256                 #20;
+    44                                                       end
+    45                                                   end
+    46                                               
+    47              1                       2001         always #5 clk = ~clk;  // Create clock with period=10
+    47              2                       2000     
+    48                                               
+    49                                                   initial begin
+    50              1                          1             clk = 0;
+    51              1                          1             rst_n = 0;
+    52              1                          1             en = 0;
+    53                                               
+    54              1                          1             #10;
+    55              1                          1             rst_n = 1;
+    56                                                       // Check if resetting gets us the right outputs
+    57                                                       if (rdy != 1) begin
+    58              1                    ***0***                 $display("ERROR: Ready signal is not asserted upon reset");
+    59              1                    ***0***                 $stop;
+    60                                                       end
+    61                                                       // Check that wren is deasserted at rest
+    62                                                       if (wren != 0) begin
+    63              1                    ***0***                 $display("ERROR: Wren signal should not be asserted");
+    64              1                    ***0***                 $stop;
+    65                                                       end
+    66                                               
+    67              1                          1             #10;
+    68                                               
+    69                                                       //start the initialiation
+    70              1                          1             #5;
+    71              1                          1             en = 1;
+    72              1                          1             #5;
+    73              1                          1             en = 0;
+    74              1                          1             #1;
+    75                                                       if (rdy != 0) begin
+    76              1                    ***0***                 $display("ERROR: Ready signal is not deasserted when enable is deasserted");
+    77              1                    ***0***                 $stop;
+    78                                                       end
+    79              1                          1             #9;
+    80                                               
+    81              1                          1             #10; //WRITE state
+    82              1                          1             #10; //INCREMENT state
+    83              1                          1             #10; //CHECK_DONE state
+    84                                               
+    85              1                          1             #7800; //After this amount of time the initialization should be finished
+    86                                               
+    87              1                          1             $display("Tests passed");
+    88                                               
+    89                                                   end
+    90                                               
+    91                                               
+    92                                               endmodule: tb_rtl_init
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                        10         5         5     50.00
+
+================================Branch Details================================
+
+Branch Coverage for file tb_rtl_init.sv --
+
+------------------------------------IF Branch------------------------------------
+    32                                       256     Count coming in to IF
+    32              1                    ***0***                 if (addr != wren_count) begin
+                                             256     All False Count
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    37                                       256     Count coming in to IF
+    37              1                    ***0***                 if (wrdata != check_array[wren_count]) begin
+                                             256     All False Count
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    57                                         1     Count coming in to IF
+    57              1                    ***0***             if (rdy != 1) begin
+                                               1     All False Count
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    62                                         1     Count coming in to IF
+    62              1                    ***0***             if (wren != 0) begin
+                                               1     All False Count
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    75                                         1     Count coming in to IF
+    75              1                    ***0***             if (rdy != 0) begin
+                                               1     All False Count
+Branch totals: 1 hit of 2 branches = 50.00%
+
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                    170        57       113     33.52
+
+================================Toggle Details================================
+
+Toggle Coverage for File tb_rtl_init.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+          5                                  rst_n           0           1                               50.00 
+          7                                    rdy           1           0                               50.00 
+         15                     check_array_idx[9]           0           0                                0.00 
+         15                     check_array_idx[8]           0           0                                0.00 
+         15                     check_array_idx[7]           0           0                                0.00 
+         15                     check_array_idx[6]           0           0                                0.00 
+         15                     check_array_idx[5]           0           0                                0.00 
+         15                     check_array_idx[4]           0           0                                0.00 
+         15                     check_array_idx[3]           0           0                                0.00 
+         15                    check_array_idx[31]           0           0                                0.00 
+         15                    check_array_idx[30]           0           0                                0.00 
+         15                     check_array_idx[2]           0           0                                0.00 
+         15                    check_array_idx[29]           0           0                                0.00 
+         15                    check_array_idx[28]           0           0                                0.00 
+         15                    check_array_idx[27]           0           0                                0.00 
+         15                    check_array_idx[26]           0           0                                0.00 
+         15                    check_array_idx[25]           0           0                                0.00 
+         15                    check_array_idx[24]           0           0                                0.00 
+         15                    check_array_idx[23]           0           0                                0.00 
+         15                    check_array_idx[22]           0           0                                0.00 
+         15                    check_array_idx[21]           0           0                                0.00 
+         15                    check_array_idx[20]           0           0                                0.00 
+         15                     check_array_idx[1]           0           0                                0.00 
+         15                    check_array_idx[19]           0           0                                0.00 
+         15                    check_array_idx[18]           0           0                                0.00 
+         15                    check_array_idx[17]           0           0                                0.00 
+         15                    check_array_idx[16]           0           0                                0.00 
+         15                    check_array_idx[15]           0           0                                0.00 
+         15                    check_array_idx[14]           0           0                                0.00 
+         15                    check_array_idx[13]           0           0                                0.00 
+         15                    check_array_idx[12]           0           0                                0.00 
+         15                    check_array_idx[11]           0           0                                0.00 
+         15                    check_array_idx[10]           0           0                                0.00 
+         15                     check_array_idx[0]           0           0                                0.00 
+         17                          wren_count[9]           0           0                                0.00 
+         17                          wren_count[8]           0           1                               50.00 
+         17                         wren_count[31]           0           0                                0.00 
+         17                         wren_count[30]           0           0                                0.00 
+         17                         wren_count[29]           0           0                                0.00 
+         17                         wren_count[28]           0           0                                0.00 
+         17                         wren_count[27]           0           0                                0.00 
+         17                         wren_count[26]           0           0                                0.00 
+         17                         wren_count[25]           0           0                                0.00 
+         17                         wren_count[24]           0           0                                0.00 
+         17                         wren_count[23]           0           0                                0.00 
+         17                         wren_count[22]           0           0                                0.00 
+         17                         wren_count[21]           0           0                                0.00 
+         17                         wren_count[20]           0           0                                0.00 
+         17                         wren_count[19]           0           0                                0.00 
+         17                         wren_count[18]           0           0                                0.00 
+         17                         wren_count[17]           0           0                                0.00 
+         17                         wren_count[16]           0           0                                0.00 
+         17                         wren_count[15]           0           0                                0.00 
+         17                         wren_count[14]           0           0                                0.00 
+         17                         wren_count[13]           0           0                                0.00 
+         17                         wren_count[12]           0           0                                0.00 
+         17                         wren_count[11]           0           0                                0.00 
+         17                         wren_count[10]           0           0                                0.00 
+
+Total Node Count     =         85 
+Toggled Node Count   =         27 
+Untoggled Node Count =         58 
+
+Toggle Coverage      =      33.52% (57 of 170 bins)
+
+
+Total Coverage By File (code coverage only, filtered view): 69.38%
+

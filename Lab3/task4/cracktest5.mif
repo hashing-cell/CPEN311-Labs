@@ -1,0 +1,99 @@
+-- Copyright (C) 2020  Intel Corporation. All rights reserved.
+-- Your use of Intel Corporation's design tools, logic functions 
+-- and other software and tools, and any partner logic 
+-- functions, and any output files from any of the foregoing 
+-- (including device programming or simulation files), and any 
+-- associated documentation or information are expressly subject 
+-- to the terms and conditions of the Intel Program License 
+-- Subscription Agreement, the Intel Quartus Prime License Agreement,
+-- the Intel FPGA IP License Agreement, or other applicable license
+-- agreement, including, without limitation, that your use is for
+-- the sole purpose of programming logic devices manufactured by
+-- Intel and sold by Intel or its authorized distributors.  Please
+-- refer to the applicable agreement for further details, at
+-- https://fpgasoftware.intel.com/eula.
+
+-- Quartus Prime generated Memory Initialization File (.mif)
+
+WIDTH=8;
+DEPTH=256;
+
+ADDRESS_RADIX=HEX;
+DATA_RADIX=HEX;
+
+CONTENT BEGIN
+	000  :   4A;
+	001  :   A7;
+	002  :   FD;
+	003  :   08;
+	004  :   01;
+	005  :   84;
+	006  :   45;
+	007  :   68;
+	008  :   85;
+	009  :   82;
+	00A  :   5C;
+	00B  :   85;
+	00C  :   97;
+	00D  :   43;
+	00E  :   4D;
+	00F  :   E7;
+	010  :   07;
+	011  :   25;
+	012  :   0F;
+	013  :   9A;
+	014  :   EC;
+	015  :   C2;
+	016  :   6A;
+	017  :   4E;
+	018  :   A7;
+	019  :   49;
+	01A  :   E0;
+	01B  :   EB;
+	01C  :   71;
+	01D  :   BC;
+	01E  :   AC;
+	01F  :   C7;
+	020  :   D7;
+	021  :   57;
+	022  :   E9;
+	023  :   E2;
+	024  :   B1;
+	025  :   1B;
+	026  :   09;
+	027  :   52;
+	028  :   33;
+	029  :   92;
+	02A  :   C1;
+	02B  :   B7;
+	02C  :   E8;
+	02D  :   4C;
+	02E  :   A1;
+	02F  :   D8;
+	030  :   57;
+	031  :   2F;
+	032  :   FA;
+	033  :   B8;
+	034  :   72;
+	035  :   B9;
+	036  :   3A;
+	037  :   FC;
+	038  :   01;
+	039  :   C3;
+	03A  :   E5;
+	03B  :   18;
+	03C  :   32;
+	03D  :   DF;
+	03E  :   BB;
+	03F  :   06;
+	040  :   32;
+	041  :   2E;
+	042  :   4A;
+	043  :   01;
+	044  :   63;
+	[045..046]  :   10;
+	047  :   16;
+	048  :   B5;
+	049  :   D8;
+	[04A..0FF]  :   00;
+END;

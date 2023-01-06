@@ -1,0 +1,2078 @@
+Coverage Report by file with details
+
+=================================================================================
+=== File: ../vga-core/vga_adapter.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                            1         1         0    100.00
+
+================================Statement Details================================
+
+Statement Coverage for file ../vga-core/vga_adapter.sv --
+
+    1                                                // synopsys translate_off
+    2                                                `timescale 1 ps / 1 ps
+    3                                                // synopsys translate_on
+    4                                                
+    5                                                /* VGA Adapter
+    6                                                 * ----------------
+    7                                                 *
+    8                                                 * This is an implementation of a VGA Adapter. The adapter uses VGA mode signalling to initiate
+    9                                                 * a 640x480 resolution mode on a computer monitor, with a refresh rate of approximately 60Hz.
+    10                                                * It is designed for easy use in an early digital logic design course to facilitate student
+    11                                                * projects on the Altera DE2 Educational board.
+    12                                                *
+    13                                                * This implementation of the VGA adapter can display images of varying colour depth at a resolution of
+    14                                                * 320x240 or 160x120 superpixels. The concept of superpixels is introduced to reduce the amount of on-chip
+    15                                                * memory used by the adapter. The following table shows the number of bits of on-chip memory used by
+    16                                                * the adapter in various resolutions and colour depths.
+    17                                                *
+    18                                                * -------------------------------------------------------------------------------------------------------------------------------
+    19                                                * Resolution | Mono    | 8 colours | 64 colours | 512 colours | 4096 colours | 32768 colours | 262144 colours | 2097152 colours |
+    20                                                * -------------------------------------------------------------------------------------------------------------------------------
+    21                                                * 160x120    |   19200 |     57600 |     115200 |      172800 |       230400 |        288000 |         345600 |          403200 |
+    22                                                * 320x240    |   78600 |    230400 | ############## Does not fit ############################################################## |
+    23                                                * -------------------------------------------------------------------------------------------------------------------------------
+    24                                                *
+    25                                                * By default the adapter works at the resolution of 320x240 with 8 colours. To set the adapter in any of
+    26                                                * the other modes, the adapter must be instantiated with specific parameters. These parameters are:
+    27                                                * - RESOLUTION - a string that should be either "320x240" or "160x120".
+    28                                                * - MONOCHROME - a string that should be "TRUE" if you only want black and white colours, and "FALSE"
+    29                                                *                otherwise.
+    30                                                * - BITS_PER_COLOUR_CHANNEL  - an integer specifying how many bits are available to describe each colour
+    31                                                *                          (R,G,B). A default value of 1 indicates that 1 bit will be used for red
+    32                                                *                          channel, 1 for green channel and 1 for blue channel. This allows 8 colours
+    33                                                *                          to be used.
+    34                                                *
+    35                                                * In addition to the above parameters, a BACKGROUND_IMAGE parameter can be specified. The parameter
+    36                                                * refers to a memory initilization file (MIF) which contains the initial contents of video memory.
+    37                                                * By specifying the initial contents of the memory we can force the adapter to initially display an
+    38                                                * image of our choice. Please note that the image described by the BACKGROUND_IMAGE file will only
+    39                                                * be valid right after your program the DE2 board. If your circuit draws a single pixel on the screen,
+    40                                                * the video memory will be altered and screen contents will be changed. In order to restore the background
+    41                                                * image your circuti will have to redraw the background image pixel by pixel, or you will have to
+    42                                                * reprogram the DE2 board, thus allowing the video memory to be rewritten.
+    43                                                *
+    44                                                * To use the module connect the vga_adapter to your circuit. Your circuit should produce a value for
+    45                                                * inputs X, Y and plot. When plot is high, at the next positive edge of the input clock the vga_adapter
+    46                                                * will change the contents of the video memory for the pixel at location (X,Y). At the next redraw
+    47                                                * cycle the VGA controller will update the contants of the screen by reading the video memory and copying
+    48                                                * it over to the screen. Since the monitor screen has no memory, the VGA controller has to copy the
+    49                                                * contents of the video memory to the screen once every 60th of a second to keep the image stable. Thus,
+    50                                                * the video memory should not be used for other purposes as it may interfere with the operation of the
+    51                                                * VGA Adapter.
+    52                                                *
+    53                                                * As a final note, ensure that the following conditions are met when using this module:
+    54                                                * 1. You are implementing the the VGA Adapter on the Altera DE2 board. Using another board may change
+    55                                                *    the amount of memory you can use, the clock generation mechanism, as well as pin assignments required
+    56                                                *    to properly drive the VGA digital-to-analog converter.
+    57                                                * 2. Outputs VGA_* should exist in your top level design. They should be assigned pin locations on the
+    58                                                *    Altera DE2 board as specified by the DE2_pin_assignments.csv file.
+    59                                                * 3. The input clock must have a frequency of 50 MHz with a 50% duty cycle. On the Altera DE2 board
+    60                                                *    PIN_N2 is the source for the 50MHz clock.
+    61                                                *
+    62                                                * During compilation with Quartus II you may receive the following warnings:
+    63                                                * - Warning: Variable or input pin "clocken1" is defined but never used
+    64                                                * - Warning: Pin "VGA_SYNC" stuck at VCC
+    65                                                * - Warning: Found xx output pins without output pin load capacitance assignment
+    66                                                * These warnings can be ignored. The first warning is generated, because the software generated
+    67                                                * memory module contains an input called "clocken1" and it does not drive logic. The second warning
+    68                                                * indicates that the VGA_SYNC signal is always high. This is intentional. The final warning is
+    69                                                * generated for the purposes of power analysis. It will persist unless the output pins are assigned
+    70                                                * output capacitance. Leaving the capacitance values at 0 pf did not affect the operation of the module.
+    71                                                *
+    72                                                * If you see any other warnings relating to the vga_adapter, be sure to examine them carefully. They may
+    73                                                * cause your circuit to malfunction.
+    74                                                *
+    75                                                * NOTES/REVISIONS:
+    76                                                * July 10, 2007 - Modified the original version of the VGA Adapter written by Sam Vafaee in 2006. The module
+    77                                                *		   now supports 2 different resolutions as well as uses half the memory compared to prior
+    78                                                *		   implementation. Also, all settings for the module can be specified from the point
+    79                                                *		   of instantiation, rather than by modifying the source code. (Tomasz S. Czajkowski)
+    80                                                */
+    81                                               
+    82                                               module vga_adapter(
+    83                                               			resetn,
+    84                                               			clock,
+    85                                               			colour,
+    86                                               			x, y, plot,
+    87                                               			/* Signals for the DAC to drive the monitor. */
+    88                                               			VGA_R,
+    89                                               			VGA_G,
+    90                                               			VGA_B,
+    91                                               			VGA_HS,
+    92                                               			VGA_VS,
+    93                                               			VGA_BLANK,
+    94                                               			VGA_SYNC,
+    95                                               			VGA_CLK);
+    96                                               
+    97                                               	parameter BITS_PER_COLOUR_CHANNEL = 1;
+    98                                               	/* The number of bits per colour channel used to represent the colour of each pixel. A value
+    99                                               	 * of 1 means that Red, Green and Blue colour channels will use 1 bit each to represent the intensity
+    100                                              	 * of the respective colour channel. For BITS_PER_COLOUR_CHANNEL=1, the adapter can display 8 colours.
+    101                                              	 * In general, the adapter is able to use 2^(3*BITS_PER_COLOUR_CHANNEL ) colours. The number of colours is
+    102                                              	 * limited by the screen resolution and the amount of on-chip memory available on the target device.
+    103                                              	 */
+    104                                              
+    105                                              	parameter MONOCHROME = "FALSE";
+    106                                              	/* Set this parameter to "TRUE" if you only wish to use black and white colours. Doing so will reduce
+    107                                              	 * the amount of memory you will use by a factor of 3. */
+    108                                              
+    109                                              	parameter RESOLUTION = "320x240";
+    110                                              	/* Set this parameter to "160x120" or "320x240". It will cause the VGA adapter to draw each dot on
+    111                                              	 * the screen by using a block of 4x4 pixels ("160x120" resolution) or 2x2 pixels ("320x240" resolution).
+    112                                              	 * It effectively reduces the screen resolution to an integer fraction of 640x480. It was necessary
+    113                                              	 * to reduce the resolution for the Video Memory to fit within the on-chip memory limits.
+    114                                              	 */
+    115                                              
+    116                                              	parameter BACKGROUND_IMAGE = "background.mif";
+    117                                              	/* The initial screen displayed when the circuit is first programmed onto the DE2 board can be
+    118                                              	 * defined useing an MIF file. The file contains the initial colour for each pixel on the screen
+    119                                              	 * and is placed in the Video Memory (VideoMemory module) upon programming. Note that resetting the
+    120                                              	 * VGA Adapter will not cause the Video Memory to revert to the specified image. */
+    121                                              
+    122                                              	parameter USING_DE1 = "FALSE";
+    123                                              	/* If set to "TRUE" it adjust the offset of the drawing mechanism to account for the differences
+    124                                              	 * between the DE2 and DE1 VGA digital to analogue converters. Set to "TRUE" if and only if
+    125                                              	 * you are running your circuit on a DE1 board. */
+    126                                              
+    127                                              	/*****************************************************************************/
+    128                                              	/* Declare inputs and outputs.                                               */
+    129                                              	/*****************************************************************************/
+    130                                              	input resetn;
+    131                                              	input clock;
+    132                                              
+    133                                              	/* The colour input can be either 1 bit or 3*BITS_PER_COLOUR_CHANNEL bits wide, depending on
+    134                                              	 * the setting of the MONOCHROME parameter.
+    135                                              	 */
+    136                                              	input [((MONOCHROME == "TRUE") ? (0) : (BITS_PER_COLOUR_CHANNEL*3-1)):0] colour;
+    137                                              
+    138                                              	/* Specify the number of bits required to represent an (X,Y) coordinate on the screen for
+    139                                              	 * a given resolution.
+    140                                              	 */
+    141                                              	input [((RESOLUTION == "320x240") ? (8) : (7)):0] x;
+    142                                              	input [((RESOLUTION == "320x240") ? (7) : (6)):0] y;
+    143                                              
+    144                                              	/* When plot is high then at the next positive edge of the clock the pixel at (x,y) will change to
+    145                                              	 * a new colour, defined by the value of the colour input.
+    146                                              	 */
+    147                                              	input plot;
+    148                                              
+    149                                              	/* These outputs drive the VGA display. The VGA_CLK is also used to clock the FSM responsible for
+    150                                              	 * controlling the data transferred to the DAC driving the monitor. */
+    151                                              	output [9:0] VGA_R;
+    152                                              	output [9:0] VGA_G;
+    153                                              	output [9:0] VGA_B;
+    154                                              	output VGA_HS;
+    155                                              	output VGA_VS;
+    156                                              	output VGA_BLANK;
+    157                                              	output VGA_SYNC;
+    158                                              	output VGA_CLK;
+    159                                              
+    160                                              	/*****************************************************************************/
+    161                                              	/* Declare local signals here.                                               */
+    162                                              	/*****************************************************************************/
+    163                                              
+    164                                              	wire valid_160x120;
+    165                                              	wire valid_320x240;
+    166                                              	/* Set to 1 if the specified coordinates are in a valid range for a given resolution.*/
+    167                                              
+    168                                              	wire writeEn;
+    169                                              	/* This is a local signal that allows the Video Memory contents to be changed.
+    170                                              	 * It depends on the screen resolution, the values of X and Y inputs, as well as
+    171                                              	 * the state of the plot signal.
+    172                                              	 */
+    173                                              
+    174                                              	wire [((MONOCHROME == "TRUE") ? (0) : (BITS_PER_COLOUR_CHANNEL*3-1)):0] to_ctrl_colour;
+    175                                              	/* Pixel colour read by the VGA controller */
+    176                                              
+    177                                              	wire [((RESOLUTION == "320x240") ? (16) : (14)):0] user_to_video_memory_addr;
+    178                                              	/* This bus specifies the address in memory the user must write
+    179                                              	 * data to in order for the pixel intended to appear at location (X,Y) to be displayed
+    180                                              	 * at the correct location on the screen.
+    181                                              	 */
+    182                                              
+    183                                              	wire [((RESOLUTION == "320x240") ? (16) : (14)):0] controller_to_video_memory_addr;
+    184                                              	/* This bus specifies the address in memory the vga controller must read data from
+    185                                              	 * in order to determine the colour of a pixel located at coordinate (X,Y) of the screen.
+    186                                              	 */
+    187                                              
+    188                                              	wire clock_25;
+    189                                              	/* 25MHz clock generated by dividing the input clock frequency by 2. */
+    190                                              
+    191                                              	wire vcc, gnd;
+    192                                              
+    193                                              	/*****************************************************************************/
+    194                                              	/* Instances of modules for the VGA adapter.                                 */
+    195                                              	/*****************************************************************************/
+    196                                              	assign vcc = 1'b1;
+    197                                              	assign gnd = 1'b0;
+    198                                              
+    199                                              	vga_address_translator user_input_translator(
+    200                                              					.x(x), .y(y), .mem_address(user_to_video_memory_addr) );
+    201                                              		defparam user_input_translator.RESOLUTION = RESOLUTION;
+    202                                              	/* Convert user coordinates into a memory address. */
+    203                                              
+    204             1                      19464     	assign valid_160x120 = (({1'b0, x} >= 0) & ({1'b0, x} < 160) & ({1'b0, y} >= 0) & ({1'b0, y} < 120)) & (RESOLUTION == "160x120");
+    205                                              	assign valid_320x240 = (({1'b0, x} >= 0) & ({1'b0, x} < 320) & ({1'b0, y} >= 0) & ({1'b0, y} < 240)) & (RESOLUTION == "320x240");
+    206                                              	assign writeEn = (plot) & (valid_160x120 | valid_320x240);
+    207                                              	/* Allow the user to plot a pixel if and only if the (X,Y) coordinates supplied are in a valid range. */
+    208                                              
+    209                                              	/* Create video memory. */
+    210                                              	altsyncram	VideoMemory (
+    211                                              				.wren_a (writeEn),
+    212                                              				.wren_b (gnd),
+    213                                              				.clock0 (clock), // write clock
+    214                                              				.clock1 (clock_25), // read clock
+    215                                              				.clocken0 (vcc), // write enable clock
+    216                                              				.clocken1 (vcc), // read enable clock
+    217                                              				.address_a (user_to_video_memory_addr),
+    218                                              				.address_b (controller_to_video_memory_addr),
+    219                                              				.data_a (colour), // data in
+    220                                              				.q_b (to_ctrl_colour)	// data out
+    221                                              				);
+    222                                              	defparam
+    223                                              		VideoMemory.width_a = ((MONOCHROME == "FALSE") ? (BITS_PER_COLOUR_CHANNEL*3) : 1),
+    224                                              		VideoMemory.width_b = ((MONOCHROME == "FALSE") ? (BITS_PER_COLOUR_CHANNEL*3) : 1),
+    225                                              		VideoMemory.intended_device_family = "Cyclone II",
+    226                                              		VideoMemory.operation_mode = "DUAL_PORT",
+    227                                              		VideoMemory.widthad_a = ((RESOLUTION == "320x240") ? (17) : (15)),
+    228                                              		VideoMemory.numwords_a = ((RESOLUTION == "320x240") ? (76800) : (19200)),
+    229                                              		VideoMemory.widthad_b = ((RESOLUTION == "320x240") ? (17) : (15)),
+    230                                              		VideoMemory.numwords_b = ((RESOLUTION == "320x240") ? (76800) : (19200)),
+    231                                              		VideoMemory.outdata_reg_b = "CLOCK1",
+    232                                              		VideoMemory.address_reg_b = "CLOCK1",
+    233                                              		VideoMemory.clock_enable_input_a = "BYPASS",
+    234                                              		VideoMemory.clock_enable_input_b = "BYPASS",
+    235                                              		VideoMemory.clock_enable_output_b = "BYPASS",
+    236                                              		VideoMemory.power_up_uninitialized = "TRUE";
+    237                                              
+    238                                              	vga_pll mypll(clock, clock_25);
+    239                                              	/* This module generates a clock with half the frequency of the input clock.
+    240                                              	 * For the VGA adapter to operate correctly the clock signal 'clock' must be
+    241                                              	 * a 50MHz clock. The derived clock, which will then operate at 25MHz, is
+    242                                              	 * required to set the monitor into the 640x480@60Hz display mode (also known as
+    243                                              	 * the VGA mode).
+    244                                              	 */
+    245                                              
+    246                                              	vga_controller controller(
+    247                                              			.vga_clock(clock_25),
+    248                                              			.resetn(resetn),
+    249                                              			.pixel_colour(to_ctrl_colour),
+    250                                              			.memory_address(controller_to_video_memory_addr),
+    251                                              			.VGA_R(VGA_R),
+    252                                              			.VGA_G(VGA_G),
+    253                                              			.VGA_B(VGA_B),
+    254                                              			.VGA_HS(VGA_HS),
+    255                                              			.VGA_VS(VGA_VS),
+    256                                              			.VGA_BLANK(VGA_BLANK),
+    257                                              			.VGA_SYNC(VGA_SYNC),
+    258                                              			.VGA_CLK(VGA_CLK)
+    259                                              		);
+    260                                              		defparam controller.BITS_PER_COLOUR_CHANNEL  = BITS_PER_COLOUR_CHANNEL ;
+    261                                              		defparam controller.MONOCHROME = MONOCHROME;
+    262                                              		defparam controller.RESOLUTION = RESOLUTION;
+    263                                              		defparam controller.USING_DE1 = USING_DE1;
+    264                                              
+    265                                                  // synthesis translate_off
+    266             1                      E-hit         always @(posedge clock, negedge resetn) begin
+    267                                                      if (resetn === 1'b0) begin
+    268                                              `ifdef MODEL_TECH
+    269             1                      E-hit                 mti_fli::mti_Command("if { [namespace exists ::de1vga] } { ::de1vga::reset } else { echo \"VGA RESET\" }");
+    270                                              `else
+    271                                                          $display("VGA RESET");
+    272                                              `endif
+    273                                                      end else if (plot === 1'b1) begin
+    274                                              `ifdef MODEL_TECH
+    275             1                      E-hit                 mti_fli::mti_Command($sformatf("if { [namespace exists ::de1vga] } { ::de1vga::plot %0d %0d %0d } else { echo \"VGA PLOT %0d,%0d %0d\" }", x, y, colour, x, y, colour));
+    276                                              `else
+    277                                                          $display("VGA PLOT %0d,%0d %0d", x, y, colour);
+    278                                              `endif
+    279                                                      end
+    280                                                  end
+    281                                                  // synthesis translate_on
+    282                                              
+    283                                              endmodule
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                    144        36       108     25.00
+
+================================Toggle Details================================
+
+Toggle Coverage for File ../vga-core/vga_adapter.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+        151                               VGA_R[9]           0           0                                0.00 
+        151                               VGA_R[8]           0           0                                0.00 
+        151                               VGA_R[7]           0           0                                0.00 
+        151                               VGA_R[6]           0           0                                0.00 
+        151                               VGA_R[5]           0           0                                0.00 
+        151                               VGA_R[4]           0           0                                0.00 
+        151                               VGA_R[3]           0           0                                0.00 
+        151                               VGA_R[2]           0           0                                0.00 
+        151                               VGA_R[1]           0           0                                0.00 
+        151                               VGA_R[0]           0           0                                0.00 
+        152                               VGA_G[9]           0           0                                0.00 
+        152                               VGA_G[8]           0           0                                0.00 
+        152                               VGA_G[7]           0           0                                0.00 
+        152                               VGA_G[6]           0           0                                0.00 
+        152                               VGA_G[5]           0           0                                0.00 
+        152                               VGA_G[4]           0           0                                0.00 
+        152                               VGA_G[3]           0           0                                0.00 
+        152                               VGA_G[2]           0           0                                0.00 
+        152                               VGA_G[1]           0           0                                0.00 
+        152                               VGA_G[0]           0           0                                0.00 
+        153                               VGA_B[9]           0           0                                0.00 
+        153                               VGA_B[8]           0           0                                0.00 
+        153                               VGA_B[7]           0           0                                0.00 
+        153                               VGA_B[6]           0           0                                0.00 
+        153                               VGA_B[5]           0           0                                0.00 
+        153                               VGA_B[4]           0           0                                0.00 
+        153                               VGA_B[3]           0           0                                0.00 
+        153                               VGA_B[2]           0           0                                0.00 
+        153                               VGA_B[1]           0           0                                0.00 
+        153                               VGA_B[0]           0           0                                0.00 
+        154                                 VGA_HS           0           0                                0.00 
+        155                                 VGA_VS           0           0                                0.00 
+        156                              VGA_BLANK           0           0                                0.00 
+        158                                VGA_CLK           1           0                               50.00 
+        174                      to_ctrl_colour[2]           0           0                                0.00 
+        174                      to_ctrl_colour[1]           0           0                                0.00 
+        174                      to_ctrl_colour[0]           0           0                                0.00 
+        183     controller_to_video_memory_addr[9]           0           0                                0.00 
+        183     controller_to_video_memory_addr[8]           0           0                                0.00 
+        183     controller_to_video_memory_addr[7]           0           0                                0.00 
+        183     controller_to_video_memory_addr[6]           0           0                                0.00 
+        183     controller_to_video_memory_addr[5]           0           0                                0.00 
+        183     controller_to_video_memory_addr[4]           0           0                                0.00 
+        183     controller_to_video_memory_addr[3]           0           0                                0.00 
+        183     controller_to_video_memory_addr[2]           0           0                                0.00 
+        183     controller_to_video_memory_addr[1]           0           0                                0.00 
+        183    controller_to_video_memory_addr[14]           0           0                                0.00 
+        183    controller_to_video_memory_addr[13]           0           0                                0.00 
+        183    controller_to_video_memory_addr[12]           0           0                                0.00 
+        183    controller_to_video_memory_addr[11]           0           0                                0.00 
+        183    controller_to_video_memory_addr[10]           0           0                                0.00 
+        183     controller_to_video_memory_addr[0]           0           0                                0.00 
+        188                               clock_25           1           0                               50.00 
+        191                                    vcc           0           0                                0.00 
+        191                                    gnd           0           0                                0.00 
+
+Total Node Count     =         72 
+Toggled Node Count   =         17 
+Untoggled Node Count =         55 
+
+Toggle Coverage      =      25.00% (36 of 144 bins)
+
+=================================================================================
+=== File: ../vga-core/vga_address_translator.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                            4         4         0    100.00
+
+================================Statement Details================================
+
+Statement Coverage for file ../vga-core/vga_address_translator.sv --
+
+    1                                                // synopsys translate_off
+    2                                                `timescale 1 ps / 1 ps
+    3                                                // synopsys translate_on
+    4                                                
+    5                                                /* This module converts a user specified coordinates into a memory address.
+    6                                                 * The output of the module depends on the resolution set by the user.
+    7                                                 */
+    8                                                module vga_address_translator(x, y, mem_address);
+    9                                                
+    10                                               	parameter RESOLUTION = "320x240";
+    11                                               	/* Set this parameter to "160x120" or "320x240". It will cause the VGA adapter to draw each dot on
+    12                                               	 * the screen by using a block of 4x4 pixels ("160x120" resolution) or 2x2 pixels ("320x240" resolution).
+    13                                               	 * It effectively reduces the screen resolution to an integer fraction of 640x480. It was necessary
+    14                                               	 * to reduce the resolution for the Video Memory to fit within the on-chip memory limits.
+    15                                               	 */
+    16                                               
+    17                                               	input [((RESOLUTION == "320x240") ? (8) : (7)):0] x;
+    18                                               	input [((RESOLUTION == "320x240") ? (7) : (6)):0] y;
+    19                                               	output reg [((RESOLUTION == "320x240") ? (16) : (14)):0] mem_address;
+    20                                               
+    21                                               	/* The basic formula is address = y*WIDTH + x;
+    22                                               	 * For 320x240 resolution we can write 320 as (256 + 64). Memory address becomes
+    23                                               	 * (y*256) + (y*64) + x;
+    24                                               	 * This simplifies multiplication a simple shift and add operation.
+    25                                               	 * A leading 0 bit is added to each operand to ensure that they are treated as unsigned
+    26                                               	 * inputs. By default the use a '+' operator will generate a signed adder.
+    27                                               	 * Similarly, for 160x120 resolution we write 160 as 128+32.
+    28                                               	 */
+    29              1                      19466     	wire [16:0] res_320x240 = ({1'b0, y, 8'd0} + {1'b0, y, 6'd0} + {1'b0, x});
+    30              1                      19466     	wire [15:0] res_160x120 = ({1'b0, y, 7'd0} + {1'b0, y, 5'd0} + {1'b0, x});
+    31                                               
+    32              1                      19464     	always @(*)
+    33                                               	begin
+    34                                               		if (RESOLUTION == "320x240")
+    35                                               			mem_address = res_320x240;
+    36                                               		else
+    37              1                      19464     			mem_address = res_160x120[14:0];
+    38                                               	end
+    39                                               endmodule
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                     96        92         4     95.83
+
+================================Toggle Details================================
+
+Toggle Coverage for File ../vga-core/vga_address_translator.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+         29                        res_320x240[16]           0           0                                0.00 
+         30                        res_160x120[15]           0           0                                0.00 
+
+Total Node Count     =         48 
+Toggled Node Count   =         46 
+Untoggled Node Count =          2 
+
+Toggle Coverage      =      95.83% (92 of 96 bins)
+
+=================================================================================
+=== File: ../vga-core/vga_controller.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           32        29         3     90.62
+
+================================Statement Details================================
+
+Statement Coverage for file ../vga-core/vga_controller.sv --
+
+    1                                                // synopsys translate_off
+    2                                                `timescale 1 ps / 1 ps
+    3                                                // synopsys translate_on
+    4                                                
+    5                                                /* This module implements the VGA controller. It assumes a 25MHz clock is supplied as input.
+    6                                                 *
+    7                                                 * General approach:
+    8                                                 * Go through each line of the screen and read the colour each pixel on that line should have from
+    9                                                 * the Video memory. To do that for each (x,y) pixel on the screen convert (x,y) coordinate to
+    10                                                * a memory_address at which the pixel colour is stored in Video memory. Once the pixel colour is
+    11                                                * read from video memory its brightness is first increased before it is forwarded to the VGA DAC.
+    12                                                */
+    13                                               module vga_controller(	vga_clock, resetn, pixel_colour, memory_address,
+    14                                               		VGA_R, VGA_G, VGA_B,
+    15                                               		VGA_HS, VGA_VS, VGA_BLANK,
+    16                                               		VGA_SYNC, VGA_CLK);
+    17                                               
+    18                                               	/* Screen resolution and colour depth parameters. */
+    19                                               
+    20                                               	parameter BITS_PER_COLOUR_CHANNEL = 1;
+    21                                               	/* The number of bits per colour channel used to represent the colour of each pixel. A value
+    22                                               	 * of 1 means that Red, Green and Blue colour channels will use 1 bit each to represent the intensity
+    23                                               	 * of the respective colour channel. For BITS_PER_COLOUR_CHANNEL=1, the adapter can display 8 colours.
+    24                                               	 * In general, the adapter is able to use 2^(3*BITS_PER_COLOUR_CHANNEL) colours. The number of colours is
+    25                                               	 * limited by the screen resolution and the amount of on-chip memory available on the target device.
+    26                                               	 */
+    27                                               
+    28                                               	parameter MONOCHROME = "FALSE";
+    29                                               	/* Set this parameter to "TRUE" if you only wish to use black and white colours. Doing so will reduce
+    30                                               	 * the amount of memory you will use by a factor of 3. */
+    31                                               
+    32                                               	parameter RESOLUTION = "320x240";
+    33                                               	/* Set this parameter to "160x120" or "320x240". It will cause the VGA adapter to draw each dot on
+    34                                               	 * the screen by using a block of 4x4 pixels ("160x120" resolution) or 2x2 pixels ("320x240" resolution).
+    35                                               	 * It effectively reduces the screen resolution to an integer fraction of 640x480. It was necessary
+    36                                               	 * to reduce the resolution for the Video Memory to fit within the on-chip memory limits.
+    37                                               	 */
+    38                                               
+    39                                               	parameter USING_DE1 = "FALSE";
+    40                                               	/* If set to "TRUE" it adjust the offset of the drawing mechanism to account for the differences
+    41                                               	 * between the DE2 and DE1 VGA digital to analogue converters. Set to "TRUE" if and only if
+    42                                               	 * you are running your circuit on a DE1 board. */
+    43                                               
+    44                                               	//--- Timing parameters.
+    45                                               	/* Recall that the VGA specification requires a few more rows and columns are drawn
+    46                                               	 * when refreshing the screen than are actually present on the screen. This is necessary to
+    47                                               	 * generate the vertical and the horizontal syncronization signals. If you wish to use a
+    48                                               	 * display mode other than 640x480 you will need to modify the parameters below as well
+    49                                               	 * as change the frequency of the clock driving the monitor (VGA_CLK).
+    50                                               	 */
+    51                                               	parameter C_VERT_NUM_PIXELS  = 11'd480;
+    52                                               	parameter C_VERT_SYNC_START  = 11'd493;
+    53                                               	parameter C_VERT_SYNC_END    = 11'd494; //(C_VERT_SYNC_START + 2 - 1);
+    54                                               	parameter C_VERT_TOTAL_COUNT = 11'd525;
+    55                                               
+    56                                               	parameter C_HORZ_NUM_PIXELS  = 11'd640;
+    57                                               	parameter C_HORZ_SYNC_START  = 11'd659;
+    58                                               	parameter C_HORZ_SYNC_END    = 11'd754; //(C_HORZ_SYNC_START + 96 - 1);
+    59                                               	parameter C_HORZ_TOTAL_COUNT = 11'd800;
+    60                                               
+    61                                               	/*****************************************************************************/
+    62                                               	/* Declare inputs and outputs.                                               */
+    63                                               	/*****************************************************************************/
+    64                                               
+    65                                               	input vga_clock, resetn;
+    66                                               	input [((MONOCHROME == "TRUE") ? (0) : (BITS_PER_COLOUR_CHANNEL*3-1)):0] pixel_colour;
+    67                                               	output [((RESOLUTION == "320x240") ? (16) : (14)):0] memory_address;
+    68                                               	output reg [9:0] VGA_R;
+    69                                               	output reg [9:0] VGA_G;
+    70                                               	output reg [9:0] VGA_B;
+    71                                               	output reg VGA_HS;
+    72                                               	output reg VGA_VS;
+    73                                               	output reg VGA_BLANK;
+    74                                               	output VGA_SYNC, VGA_CLK;
+    75                                               
+    76                                               	/*****************************************************************************/
+    77                                               	/* Local Signals.                                                            */
+    78                                               	/*****************************************************************************/
+    79                                               
+    80                                               	reg VGA_HS1;
+    81                                               	reg VGA_VS1;
+    82                                               	reg VGA_BLANK1;
+    83                                               	reg [9:0] xCounter, yCounter;
+    84                                               	wire xCounter_clear;
+    85                                               	wire yCounter_clear;
+    86                                               	wire vcc;
+    87                                               
+    88                                               	reg [((RESOLUTION == "320x240") ? (8) : (7)):0] x;
+    89                                               	reg [((RESOLUTION == "320x240") ? (7) : (6)):0] y;
+    90                                               	/* Inputs to the converter. */
+    91                                               
+    92                                               	/*****************************************************************************/
+    93                                               	/* Controller implementation.                                                */
+    94                                               	/*****************************************************************************/
+    95                                               
+    96                                               	assign vcc =1'b1;
+    97                                               
+    98                                               	/* A counter to scan through a horizontal line. */
+    99              1                          2     	always @(posedge vga_clock or negedge resetn)
+    100                                              	begin
+    101                                              		if (!resetn)
+    102             1                          1     			xCounter <= 10'd0;
+    103                                              		else if (xCounter_clear)
+    104             1                    ***0***     			xCounter <= 10'd0;
+    105                                              		else
+    106                                              		begin
+    107             1                          1     			xCounter <= xCounter + 1'b1;
+    108                                              		end
+    109                                              	end
+    110             1                          3     	assign xCounter_clear = (xCounter == (C_HORZ_TOTAL_COUNT-1));
+    111                                              
+    112                                              	/* A counter to scan vertically, indicating the row currently being drawn. */
+    113             1                          2     	always @(posedge vga_clock or negedge resetn)
+    114                                              	begin
+    115                                              		if (!resetn)
+    116             1                          1     			yCounter <= 10'd0;
+    117                                              		else if (xCounter_clear && yCounter_clear)
+    118             1                    ***0***     			yCounter <= 10'd0;
+    119                                              		else if (xCounter_clear)		//Increment when x counter resets
+    120             1                    ***0***     			yCounter <= yCounter + 1'b1;
+    121                                              	end
+    122             1                          2     	assign yCounter_clear = (yCounter == (C_VERT_TOTAL_COUNT-1));
+    123                                              
+    124                                              	/* Convert the xCounter/yCounter location from screen pixels (640x480) to our
+    125                                              	 * local dots (320x240 or 160x120). Here we effectively divide x/y coordinate by 2 or 4,
+    126                                              	 * depending on the resolution. */
+    127             1                          1     	always @(*)
+    128                                              	begin
+    129                                              		if (RESOLUTION == "320x240")
+    130                                              		begin
+    131                                              			x = xCounter[9:1];
+    132                                              			y = yCounter[8:1];
+    133                                              		end
+    134                                              		else
+    135                                              		begin
+    136             1                          1     			x = xCounter[9:2];
+    137             1                          1     			y = yCounter[8:2];
+    138                                              		end
+    139                                              	end
+    140                                              
+    141                                              	/* Change the (x,y) coordinate into a memory address. */
+    142                                              	vga_address_translator controller_translator(
+    143                                              					.x(x), .y(y), .mem_address(memory_address) );
+    144                                              		defparam controller_translator.RESOLUTION = RESOLUTION;
+    145                                              
+    146                                              
+    147                                              	/* Generate the vertical and horizontal synchronization pulses. */
+    148             1                          1     	always @(posedge vga_clock)
+    149                                              	begin
+    150                                              		//- Sync Generator (ACTIVE LOW)
+    151                                              		if (USING_DE1 == "TRUE")
+    152                                              			VGA_HS1 <= ~((xCounter >= C_HORZ_SYNC_START-2) && (xCounter <= C_HORZ_SYNC_END-2));
+    153                                              		else
+    154             1                          1     			VGA_HS1 <= ~((xCounter >= C_HORZ_SYNC_START) && (xCounter <= C_HORZ_SYNC_END));
+    155             1                          1     		VGA_VS1 <= ~((yCounter >= C_VERT_SYNC_START) && (yCounter <= C_VERT_SYNC_END));
+    156                                              
+    157                                              		//- Current X and Y is valid pixel range
+    158             1                          1     		VGA_BLANK1 <= ((xCounter < C_HORZ_NUM_PIXELS) && (yCounter < C_VERT_NUM_PIXELS));
+    159                                              
+    160                                              		//- Add 1 cycle delay
+    161             1                          1     		VGA_HS <= VGA_HS1;
+    162             1                          1     		VGA_VS <= VGA_VS1;
+    163             1                          1     		VGA_BLANK <= VGA_BLANK1;
+    164                                              	end
+    165                                              
+    166                                              	/* VGA sync should be 1 at all times. */
+    167                                              	assign VGA_SYNC = vcc;
+    168                                              
+    169                                              	/* Generate the VGA clock signal. */
+    170                                              	assign VGA_CLK = vga_clock;
+    171                                              
+    172                                              	/* Brighten the colour output. */
+    173                                              	// The colour input is first processed to brighten the image a little. Setting the top
+    174                                              	// bits to correspond to the R,G,B colour makes the image a bit dull. To brighten the image,
+    175                                              	// each bit of the colour is replicated through the 10 DAC colour input bits. For example,
+    176                                              	// when BITS_PER_COLOUR_CHANNEL is 2 and the red component is set to 2'b10, then the
+    177                                              	// VGA_R input to the DAC will be set to 10'b1010101010.
+    178                                              
+    179                                              	integer index;
+    180                                              	integer sub_index;
+    181                                              
+    182                                              	wire on_screen;
+    183                                              
+    184             1                          3     	assign on_screen = (USING_DE1 == "TRUE") ?
+    185                                              							(({1'b0, xCounter} >= 2) & ({1'b0, xCounter} < C_HORZ_NUM_PIXELS+2) & ({1'b0, yCounter} < C_VERT_NUM_PIXELS)) :
+    186                                              							(({1'b0, xCounter} >= 0) & ({1'b0, xCounter} < C_HORZ_NUM_PIXELS+2) & ({1'b0, yCounter} < C_VERT_NUM_PIXELS));
+    187                                              
+    188             1                          2     	always @(pixel_colour or on_screen)
+    189                                              	begin
+    190             1                          2     		VGA_R <= 'b0;
+    191             1                          2     		VGA_G <= 'b0;
+    192             1                          2     		VGA_B <= 'b0;
+    193                                              		if (MONOCHROME == "FALSE")
+    194                                              		begin
+    195             1                          2     			for (index = 10-BITS_PER_COLOUR_CHANNEL; index >= 0; index = index - BITS_PER_COLOUR_CHANNEL)
+    195             2                         20     
+    196                                              			begin
+    197             1                         20     				for (sub_index = BITS_PER_COLOUR_CHANNEL - 1; sub_index >= 0; sub_index = sub_index - 1)
+    197             2                         20     
+    198                                              				begin
+    199             1                         20     					VGA_R[sub_index+index] <= on_screen & pixel_colour[sub_index + BITS_PER_COLOUR_CHANNEL*2];
+    200             1                         20     					VGA_G[sub_index+index] <= on_screen & pixel_colour[sub_index + BITS_PER_COLOUR_CHANNEL];
+    201             1                         20     					VGA_B[sub_index+index] <= on_screen & pixel_colour[sub_index];
+    202                                              				end
+    203                                              			end
+    204                                              		end
+    205                                              		else
+    206                                              		begin
+    207                                              			for (index = 0; index < 10; index = index + 1)
+    208                                              			begin
+    209                                              				VGA_R[index] <= on_screen & pixel_colour[0:0];
+    210                                              				VGA_G[index] <= on_screen & pixel_colour[0:0];
+    211                                              				VGA_B[index] <= on_screen & pixel_colour[0:0];
+    212                                              			end
+    213                                              		end
+    214                                              	end
+    215                                              
+    216                                              endmodule
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                         7         4         3     57.14
+
+================================Branch Details================================
+
+Branch Coverage for file ../vga-core/vga_controller.sv --
+
+------------------------------------IF Branch------------------------------------
+    101                                        2     Count coming in to IF
+    101             1                          1     		if (!resetn)
+    103             1                    ***0***     		else if (xCounter_clear)
+    105             1                          1     		else
+Branch totals: 2 hits of 3 branches = 66.66%
+
+------------------------------------IF Branch------------------------------------
+    115                                        2     Count coming in to IF
+    115             1                          1     		if (!resetn)
+    117             1                    ***0***     		else if (xCounter_clear && yCounter_clear)
+    119             1                    ***0***     		else if (xCounter_clear)		//Increment when x counter resets
+                                               1     All False Count
+Branch totals: 2 hits of 4 branches = 50.00%
+
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                    276         1       275      0.36
+
+================================Toggle Details================================
+
+Toggle Coverage for File ../vga-core/vga_controller.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+         68                               VGA_R[9]           0           0                                0.00 
+         68                               VGA_R[8]           0           0                                0.00 
+         68                               VGA_R[7]           0           0                                0.00 
+         68                               VGA_R[6]           0           0                                0.00 
+         68                               VGA_R[5]           0           0                                0.00 
+         68                               VGA_R[4]           0           0                                0.00 
+         68                               VGA_R[3]           0           0                                0.00 
+         68                               VGA_R[2]           0           0                                0.00 
+         68                               VGA_R[1]           0           0                                0.00 
+         68                               VGA_R[0]           0           0                                0.00 
+         69                               VGA_G[9]           0           0                                0.00 
+         69                               VGA_G[8]           0           0                                0.00 
+         69                               VGA_G[7]           0           0                                0.00 
+         69                               VGA_G[6]           0           0                                0.00 
+         69                               VGA_G[5]           0           0                                0.00 
+         69                               VGA_G[4]           0           0                                0.00 
+         69                               VGA_G[3]           0           0                                0.00 
+         69                               VGA_G[2]           0           0                                0.00 
+         69                               VGA_G[1]           0           0                                0.00 
+         69                               VGA_G[0]           0           0                                0.00 
+         70                               VGA_B[9]           0           0                                0.00 
+         70                               VGA_B[8]           0           0                                0.00 
+         70                               VGA_B[7]           0           0                                0.00 
+         70                               VGA_B[6]           0           0                                0.00 
+         70                               VGA_B[5]           0           0                                0.00 
+         70                               VGA_B[4]           0           0                                0.00 
+         70                               VGA_B[3]           0           0                                0.00 
+         70                               VGA_B[2]           0           0                                0.00 
+         70                               VGA_B[1]           0           0                                0.00 
+         70                               VGA_B[0]           0           0                                0.00 
+         71                                 VGA_HS           0           0                                0.00 
+         72                                 VGA_VS           0           0                                0.00 
+         73                              VGA_BLANK           0           0                                0.00 
+         80                                VGA_HS1           0           0                                0.00 
+         81                                VGA_VS1           0           0                                0.00 
+         82                             VGA_BLANK1           0           0                                0.00 
+         83                            yCounter[9]           0           0                                0.00 
+         83                            yCounter[8]           0           0                                0.00 
+         83                            yCounter[7]           0           0                                0.00 
+         83                            yCounter[6]           0           0                                0.00 
+         83                            yCounter[5]           0           0                                0.00 
+         83                            yCounter[4]           0           0                                0.00 
+         83                            yCounter[3]           0           0                                0.00 
+         83                            yCounter[2]           0           0                                0.00 
+         83                            yCounter[1]           0           0                                0.00 
+         83                            yCounter[0]           0           0                                0.00 
+         83                            xCounter[9]           0           0                                0.00 
+         83                            xCounter[8]           0           0                                0.00 
+         83                            xCounter[7]           0           0                                0.00 
+         83                            xCounter[6]           0           0                                0.00 
+         83                            xCounter[5]           0           0                                0.00 
+         83                            xCounter[4]           0           0                                0.00 
+         83                            xCounter[3]           0           0                                0.00 
+         83                            xCounter[2]           0           0                                0.00 
+         83                            xCounter[1]           0           0                                0.00 
+         83                            xCounter[0]           0           1                               50.00 
+         84                         xCounter_clear           0           0                                0.00 
+         85                         yCounter_clear           0           0                                0.00 
+         88                                   x[7]           0           0                                0.00 
+         88                                   x[6]           0           0                                0.00 
+         88                                   x[5]           0           0                                0.00 
+         88                                   x[4]           0           0                                0.00 
+         88                                   x[3]           0           0                                0.00 
+         88                                   x[2]           0           0                                0.00 
+         88                                   x[1]           0           0                                0.00 
+         88                                   x[0]           0           0                                0.00 
+         89                                   y[6]           0           0                                0.00 
+         89                                   y[5]           0           0                                0.00 
+         89                                   y[4]           0           0                                0.00 
+         89                                   y[3]           0           0                                0.00 
+         89                                   y[2]           0           0                                0.00 
+         89                                   y[1]           0           0                                0.00 
+         89                                   y[0]           0           0                                0.00 
+        179                               index[9]           0           0                                0.00 
+        179                               index[8]           0           0                                0.00 
+        179                               index[7]           0           0                                0.00 
+        179                               index[6]           0           0                                0.00 
+        179                               index[5]           0           0                                0.00 
+        179                               index[4]           0           0                                0.00 
+        179                               index[3]           0           0                                0.00 
+        179                              index[31]           0           0                                0.00 
+        179                              index[30]           0           0                                0.00 
+        179                               index[2]           0           0                                0.00 
+        179                              index[29]           0           0                                0.00 
+        179                              index[28]           0           0                                0.00 
+        179                              index[27]           0           0                                0.00 
+        179                              index[26]           0           0                                0.00 
+        179                              index[25]           0           0                                0.00 
+        179                              index[24]           0           0                                0.00 
+        179                              index[23]           0           0                                0.00 
+        179                              index[22]           0           0                                0.00 
+        179                              index[21]           0           0                                0.00 
+        179                              index[20]           0           0                                0.00 
+        179                               index[1]           0           0                                0.00 
+        179                              index[19]           0           0                                0.00 
+        179                              index[18]           0           0                                0.00 
+        179                              index[17]           0           0                                0.00 
+        179                              index[16]           0           0                                0.00 
+        179                              index[15]           0           0                                0.00 
+        179                              index[14]           0           0                                0.00 
+        179                              index[13]           0           0                                0.00 
+        179                              index[12]           0           0                                0.00 
+        179                              index[11]           0           0                                0.00 
+        179                              index[10]           0           0                                0.00 
+        179                               index[0]           0           0                                0.00 
+        180                           sub_index[9]           0           0                                0.00 
+        180                           sub_index[8]           0           0                                0.00 
+        180                           sub_index[7]           0           0                                0.00 
+        180                           sub_index[6]           0           0                                0.00 
+        180                           sub_index[5]           0           0                                0.00 
+        180                           sub_index[4]           0           0                                0.00 
+        180                           sub_index[3]           0           0                                0.00 
+        180                          sub_index[31]           0           0                                0.00 
+        180                          sub_index[30]           0           0                                0.00 
+        180                           sub_index[2]           0           0                                0.00 
+        180                          sub_index[29]           0           0                                0.00 
+        180                          sub_index[28]           0           0                                0.00 
+        180                          sub_index[27]           0           0                                0.00 
+        180                          sub_index[26]           0           0                                0.00 
+        180                          sub_index[25]           0           0                                0.00 
+        180                          sub_index[24]           0           0                                0.00 
+        180                          sub_index[23]           0           0                                0.00 
+        180                          sub_index[22]           0           0                                0.00 
+        180                          sub_index[21]           0           0                                0.00 
+        180                          sub_index[20]           0           0                                0.00 
+        180                           sub_index[1]           0           0                                0.00 
+        180                          sub_index[19]           0           0                                0.00 
+        180                          sub_index[18]           0           0                                0.00 
+        180                          sub_index[17]           0           0                                0.00 
+        180                          sub_index[16]           0           0                                0.00 
+        180                          sub_index[15]           0           0                                0.00 
+        180                          sub_index[14]           0           0                                0.00 
+        180                          sub_index[13]           0           0                                0.00 
+        180                          sub_index[12]           0           0                                0.00 
+        180                          sub_index[11]           0           0                                0.00 
+        180                          sub_index[10]           0           0                                0.00 
+        180                           sub_index[0]           0           0                                0.00 
+        182                              on_screen           0           0                                0.00 
+
+Total Node Count     =        138 
+Toggled Node Count   =          0 
+Untoggled Node Count =        138 
+
+Toggle Coverage      =       0.36% (1 of 276 bins)
+
+=================================================================================
+=== File: ../vga-core/vga_pll.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                            1         1         0    100.00
+
+================================Statement Details================================
+
+Statement Coverage for file ../vga-core/vga_pll.sv --
+
+    1                                                // megafunction wizard: %ALTPLL%
+    2                                                // GENERATION: STANDARD
+    3                                                // VERSION: WM1.0
+    4                                                // MODULE: altpll
+    5                                                
+    6                                                // ============================================================
+    7                                                // File Name: VgaPll.v
+    8                                                // Megafunction Name(s):
+    9                                                // 			altpll
+    10                                               // ============================================================
+    11                                               // ************************************************************
+    12                                               // THIS IS A WIZARD-GENERATED FILE. DO NOT EDIT THIS FILE!
+    13                                               //
+    14                                               // 5.0 Build 168 06/22/2005 SP 1 SJ Full Version
+    15                                               // ************************************************************
+    16                                               
+    17                                               
+    18                                               //Copyright (C) 1991-2005 Altera Corporation
+    19                                               //Your use of Altera Corporation's design tools, logic functions
+    20                                               //and other software and tools, and its AMPP partner logic
+    21                                               //functions, and any output files any of the foregoing
+    22                                               //(including device programming or simulation files), and any
+    23                                               //associated documentation or information are expressly subject
+    24                                               //to the terms and conditions of the Altera Program License
+    25                                               //Subscription Agreement, Altera MegaCore Function License
+    26                                               //Agreement, or other applicable license agreement, including,
+    27                                               //without limitation, that your use is for the sole purpose of
+    28                                               //programming logic devices manufactured by Altera and sold by
+    29                                               //Altera or its authorized distributors.  Please refer to the
+    30                                               //applicable agreement for further details.
+    31                                               
+    32                                               
+    33                                               // synopsys translate_off
+    34                                               `timescale 1 ps / 1 ps
+    35                                               // synopsys translate_on
+    36                                               module vga_pll (
+    37                                               	clock_in,
+    38                                               	clock_out);
+    39                                               
+    40                                               	input	  clock_in;
+    41                                               	output	  clock_out;
+    42                                               
+    43                                               	wire [5:0] clock_output_bus;
+    44                                               	wire [1:0] clock_input_bus;
+    45                                               	wire gnd;
+    46                                               
+    47                                               	assign gnd = 1'b0;
+    48              1                    2051257     	assign clock_input_bus = { gnd, clock_in };
+    49                                               
+    50                                               	altpll	altpll_component (
+    51                                               				.inclk (clock_input_bus),
+    52                                               				.clk (clock_output_bus)
+    53                                               				);
+    54                                               	defparam
+    55                                               		altpll_component.operation_mode = "NORMAL",
+    56                                               		altpll_component.intended_device_family = "Cyclone II",
+    57                                               		altpll_component.lpm_type = "altpll",
+    58                                               		altpll_component.pll_type = "FAST",
+    59                                               		/* Specify the input clock to be a 50MHz clock. A 50 MHz clock is present
+    60                                               		 * on PIN_N2 on the DE2 board. We need to specify the input clock frequency
+    61                                               		 * in order to set up the PLL correctly. To do this we must put the input clock
+    62                                               		 * period measured in picoseconds in the inclk0_input_frequency parameter.
+    63                                               		 * 1/(20000 ps) = 0.5 * 10^(5) Hz = 50 * 10^(6) Hz = 50 MHz. */
+    64                                               		altpll_component.inclk0_input_frequency = 20000,
+    65                                               		altpll_component.primary_clock = "INCLK0",
+    66                                               		/* Specify output clock parameters. The output clock should have a
+    67                                               		 * frequency of 25 MHz, with 50% duty cycle. */
+    68                                               		altpll_component.compensate_clock = "CLK0",
+    69                                               		altpll_component.clk0_phase_shift = "0",
+    70                                               		altpll_component.clk0_divide_by = 2,
+    71                                               		altpll_component.clk0_multiply_by = 1,
+    72                                               		altpll_component.clk0_duty_cycle = 50;
+    73                                               
+    74                                               	assign clock_out = clock_output_bus[0];
+    75                                               
+    76                                               endmodule
+    77                                               
+    78                                               // ============================================================
+    79                                               // CNX file retrieval info
+    80                                               // ============================================================
+    81                                               // Retrieval info: PRIVATE: MIRROR_CLK0 STRING "0"
+    82                                               // Retrieval info: PRIVATE: PHASE_SHIFT_UNIT0 STRING "deg"
+    83                                               // Retrieval info: PRIVATE: OUTPUT_FREQ_UNIT0 STRING "MHz"
+    84                                               // Retrieval info: PRIVATE: INCLK1_FREQ_UNIT_COMBO STRING "MHz"
+    85                                               // Retrieval info: PRIVATE: SPREAD_USE STRING "0"
+    86                                               // Retrieval info: PRIVATE: SPREAD_FEATURE_ENABLED STRING "0"
+    87                                               // Retrieval info: PRIVATE: GLOCKED_COUNTER_EDIT_CHANGED STRING "1"
+    88                                               // Retrieval info: PRIVATE: GLOCK_COUNTER_EDIT NUMERIC "1048575"
+    89                                               // Retrieval info: PRIVATE: SRC_SYNCH_COMP_RADIO STRING "0"
+    90                                               // Retrieval info: PRIVATE: DUTY_CYCLE0 STRING "50.00000000"
+    91                                               // Retrieval info: PRIVATE: PHASE_SHIFT0 STRING "0.00000000"
+    92                                               // Retrieval info: PRIVATE: MULT_FACTOR0 NUMERIC "1"
+    93                                               // Retrieval info: PRIVATE: OUTPUT_FREQ_MODE0 STRING "1"
+    94                                               // Retrieval info: PRIVATE: SPREAD_PERCENT STRING "0.500"
+    95                                               // Retrieval info: PRIVATE: LOCKED_OUTPUT_CHECK STRING "0"
+    96                                               // Retrieval info: PRIVATE: PLL_ARESET_CHECK STRING "0"
+    97                                               // Retrieval info: PRIVATE: STICKY_CLK0 STRING "1"
+    98                                               // Retrieval info: PRIVATE: BANDWIDTH STRING "1.000"
+    99                                               // Retrieval info: PRIVATE: BANDWIDTH_USE_CUSTOM STRING "0"
+    100                                              // Retrieval info: PRIVATE: DEVICE_SPEED_GRADE STRING "Any"
+    101                                              // Retrieval info: PRIVATE: SPREAD_FREQ STRING "50.000"
+    102                                              // Retrieval info: PRIVATE: BANDWIDTH_FEATURE_ENABLED STRING "0"
+    103                                              // Retrieval info: PRIVATE: LONG_SCAN_RADIO STRING "1"
+    104                                              // Retrieval info: PRIVATE: PLL_ENHPLL_CHECK NUMERIC "0"
+    105                                              // Retrieval info: PRIVATE: LVDS_MODE_DATA_RATE_DIRTY NUMERIC "0"
+    106                                              // Retrieval info: PRIVATE: USE_CLK0 STRING "1"
+    107                                              // Retrieval info: PRIVATE: INCLK1_FREQ_EDIT_CHANGED STRING "1"
+    108                                              // Retrieval info: PRIVATE: SCAN_FEATURE_ENABLED STRING "0"
+    109                                              // Retrieval info: PRIVATE: ZERO_DELAY_RADIO STRING "0"
+    110                                              // Retrieval info: PRIVATE: PLL_PFDENA_CHECK STRING "0"
+    111                                              // Retrieval info: PRIVATE: CREATE_CLKBAD_CHECK STRING "0"
+    112                                              // Retrieval info: PRIVATE: INCLK1_FREQ_EDIT STRING "50.000"
+    113                                              // Retrieval info: PRIVATE: CUR_DEDICATED_CLK STRING "c0"
+    114                                              // Retrieval info: PRIVATE: PLL_FASTPLL_CHECK NUMERIC "0"
+    115                                              // Retrieval info: PRIVATE: ACTIVECLK_CHECK STRING "0"
+    116                                              // Retrieval info: PRIVATE: BANDWIDTH_FREQ_UNIT STRING "MHz"
+    117                                              // Retrieval info: PRIVATE: INCLK0_FREQ_UNIT_COMBO STRING "MHz"
+    118                                              // Retrieval info: PRIVATE: GLOCKED_MODE_CHECK STRING "0"
+    119                                              // Retrieval info: PRIVATE: NORMAL_MODE_RADIO STRING "1"
+    120                                              // Retrieval info: PRIVATE: CUR_FBIN_CLK STRING "e0"
+    121                                              // Retrieval info: PRIVATE: DIV_FACTOR0 NUMERIC "1"
+    122                                              // Retrieval info: PRIVATE: INCLK1_FREQ_UNIT_CHANGED STRING "1"
+    123                                              // Retrieval info: PRIVATE: HAS_MANUAL_SWITCHOVER STRING "1"
+    124                                              // Retrieval info: PRIVATE: EXT_FEEDBACK_RADIO STRING "0"
+    125                                              // Retrieval info: PRIVATE: PLL_AUTOPLL_CHECK NUMERIC "1"
+    126                                              // Retrieval info: PRIVATE: CLKLOSS_CHECK STRING "0"
+    127                                              // Retrieval info: PRIVATE: BANDWIDTH_USE_AUTO STRING "1"
+    128                                              // Retrieval info: PRIVATE: SHORT_SCAN_RADIO STRING "0"
+    129                                              // Retrieval info: PRIVATE: LVDS_MODE_DATA_RATE STRING "Not Available"
+    130                                              // Retrieval info: PRIVATE: CLKSWITCH_CHECK STRING "1"
+    131                                              // Retrieval info: PRIVATE: SPREAD_FREQ_UNIT STRING "KHz"
+    132                                              // Retrieval info: PRIVATE: PLL_ENA_CHECK STRING "0"
+    133                                              // Retrieval info: PRIVATE: INCLK0_FREQ_EDIT STRING "50.000"
+    134                                              // Retrieval info: PRIVATE: CNX_NO_COMPENSATE_RADIO STRING "0"
+    135                                              // Retrieval info: PRIVATE: INT_FEEDBACK__MODE_RADIO STRING "1"
+    136                                              // Retrieval info: PRIVATE: OUTPUT_FREQ0 STRING "25.000"
+    137                                              // Retrieval info: PRIVATE: PRIMARY_CLK_COMBO STRING "inclk0"
+    138                                              // Retrieval info: PRIVATE: CREATE_INCLK1_CHECK STRING "0"
+    139                                              // Retrieval info: PRIVATE: SACN_INPUTS_CHECK STRING "0"
+    140                                              // Retrieval info: PRIVATE: DEV_FAMILY STRING "Cyclone II"
+    141                                              // Retrieval info: PRIVATE: SWITCHOVER_COUNT_EDIT NUMERIC "1"
+    142                                              // Retrieval info: PRIVATE: SWITCHOVER_FEATURE_ENABLED STRING "1"
+    143                                              // Retrieval info: PRIVATE: BANDWIDTH_PRESET STRING "Low"
+    144                                              // Retrieval info: PRIVATE: GLOCKED_FEATURE_ENABLED STRING "1"
+    145                                              // Retrieval info: PRIVATE: USE_CLKENA0 STRING "0"
+    146                                              // Retrieval info: PRIVATE: LVDS_PHASE_SHIFT_UNIT0 STRING "deg"
+    147                                              // Retrieval info: PRIVATE: CLKBAD_SWITCHOVER_CHECK STRING "0"
+    148                                              // Retrieval info: PRIVATE: BANDWIDTH_USE_PRESET STRING "0"
+    149                                              // Retrieval info: PRIVATE: PLL_LVDS_PLL_CHECK NUMERIC "0"
+    150                                              // Retrieval info: LIBRARY: altera_mf altera_mf.altera_mf_components.all
+    151                                              // Retrieval info: CONSTANT: CLK0_DUTY_CYCLE NUMERIC "50"
+    152                                              // Retrieval info: CONSTANT: LPM_TYPE STRING "altpll"
+    153                                              // Retrieval info: CONSTANT: CLK0_MULTIPLY_BY NUMERIC "1"
+    154                                              // Retrieval info: CONSTANT: INCLK0_INPUT_FREQUENCY NUMERIC "20000"
+    155                                              // Retrieval info: CONSTANT: CLK0_DIVIDE_BY NUMERIC "2"
+    156                                              // Retrieval info: CONSTANT: PLL_TYPE STRING "FAST"
+    157                                              // Retrieval info: CONSTANT: INTENDED_DEVICE_FAMILY STRING "Cyclone II"
+    158                                              // Retrieval info: CONSTANT: OPERATION_MODE STRING "NORMAL"
+    159                                              // Retrieval info: CONSTANT: COMPENSATE_CLOCK STRING "CLK0"
+    160                                              // Retrieval info: CONSTANT: CLK0_PHASE_SHIFT STRING "0"
+    161                                              // Retrieval info: USED_PORT: c0 0 0 0 0 OUTPUT VCC "c0"
+    162                                              // Retrieval info: USED_PORT: @clk 0 0 6 0 OUTPUT VCC "@clk[5..0]"
+    163                                              // Retrieval info: USED_PORT: inclk0 0 0 0 0 INPUT GND "inclk0"
+    164                                              // Retrieval info: USED_PORT: @extclk 0 0 4 0 OUTPUT VCC "@extclk[3..0]"
+    165                                              // Retrieval info: CONNECT: @inclk 0 0 1 0 inclk0 0 0 0 0
+    166                                              // Retrieval info: CONNECT: c0 0 0 0 0 @clk 0 0 1 0
+    167                                              // Retrieval info: CONNECT: @inclk 0 0 1 1 GND 0 0 0 0
+    168                                              // Retrieval info: GEN_FILE: TYPE_NORMAL VgaPll.v TRUE FALSE
+    169                                              // Retrieval info: GEN_FILE: TYPE_NORMAL VgaPll.inc FALSE FALSE
+    170                                              // Retrieval info: GEN_FILE: TYPE_NORMAL VgaPll.cmp FALSE FALSE
+    171                                              // Retrieval info: GEN_FILE: TYPE_NORMAL VgaPll.bsf FALSE FALSE
+    172                                              // Retrieval info: GEN_FILE: TYPE_NORMAL VgaPll_inst.v FALSE FALSE
+    173                                              // Retrieval info: GEN_FILE: TYPE_NORMAL VgaPll_bb.v FALSE FALSE
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                     16         7         9     43.75
+
+================================Toggle Details================================
+
+Toggle Coverage for File ../vga-core/vga_pll.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+         43                    clock_output_bus[5]           0           0                                0.00 
+         43                    clock_output_bus[4]           0           0                                0.00 
+         43                    clock_output_bus[3]           0           0                                0.00 
+         43                    clock_output_bus[0]           1           0                               50.00 
+         44                     clock_input_bus[1]           0           0                                0.00 
+
+Total Node Count     =          8 
+Toggled Node Count   =          3 
+Untoggled Node Count =          5 
+
+Toggle Coverage      =      43.75% (7 of 16 bins)
+
+=================================================================================
+=== File: circle.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                          164       149        15     90.85
+
+================================Statement Details================================
+
+Statement Coverage for file circle.sv --
+
+    1                                                module circle(input logic clk, input logic rst_n, input logic [2:0] colour,
+    2                                                              input logic [7:0] centre_x, input logic [6:0] centre_y, input logic [7:0] radius,
+    3                                                              input logic start, output logic done,
+    4                                                              output logic [7:0] vga_x, output logic [6:0] vga_y,
+    5                                                              output logic [2:0] vga_colour, output logic vga_plot);
+    6                                                	
+    7                                                	//enumeration for all possible states
+    8                                                	typedef enum { 
+    9                                                		CIRCLE_WAIT, 
+    10                                               		CIRCLE_CHECK_LOOP, 
+    11                                               		CIRCLE_DRAW_PIXEL1,
+    12                                               		CIRCLE_DRAW_PIXEL2,
+    13                                               		CIRCLE_DRAW_PIXEL3,
+    14                                               		CIRCLE_DRAW_PIXEL4, 
+    15                                               		CIRCLE_DRAW_PIXEL5,
+    16                                               		CIRCLE_DRAW_PIXEL6,
+    17                                               		CIRCLE_DRAW_PIXEL7,
+    18                                               		CIRCLE_DRAW_PIXEL8,
+    19                                               		CIRCLE_CRIT_CHECK,
+    20                                               		CIRCLE_CRIT_LE_ZERO,
+    21                                               		CIRCLE_CRIT_GT_ZERO,
+    22                                               		CIRCLE_DRAW_DONE
+    23                                               	} state_t;
+    24                                               
+    25                                               	state_t curr_state;
+    26                                               	state_t next_state;
+    27                                               
+    28                                               	logic [7:0] offset_x;
+    29                                               	logic [6:0] offset_y;
+    30                                               	logic signed [32:0] crit;
+    31                                               	logic signed [32:0] next_crit;
+    32                                               
+    33                                                   logic [8:0] vga_x_logic;
+    34                                                   logic [7:0] vga_y_logic;
+    35                                               
+    36                                               	logic update_offset_x;
+    37                                               	logic update_offset_y;
+    38                                               	logic update_crit;
+    39                                               	logic which_crit;
+    40                                               
+    41                                                   // STATE MACHINE CLOCK LOGIC BLOCK
+    42              1                        324     	always @(posedge clk) begin
+    43                                               		if(!rst_n) begin
+    44              1                          1     			curr_state <= CIRCLE_WAIT;
+    45                                               		end	else begin
+    46              1                        323     			curr_state <= next_state;
+    47                                               		end
+    48                                               	end
+    49                                               
+    50                                               	// offset_x register logic block
+    51              1                         26     	always @(posedge clk) begin
+    52                                               		if (!rst_n) begin
+    53              1                          1                 offset_x <= radius;
+    54                                                       end
+    55                                                       else if (update_offset_x) begin
+    56              1                         12                 offset_x <= offset_x - 1;
+    57                                               		end
+    58                                               	end
+    59                                               
+    60                                               	// offset_y register logic block
+    61              1                         60     	always @(posedge clk) begin
+    62                                               		if (!rst_n) begin
+    63              1                          1                 offset_y <= 0;
+    64                                                       end
+    65                                                       else if (update_offset_y) begin
+    66              1                         29                 offset_y <= offset_y + 1;
+    67                                               		end
+    68                                               	end
+    69                                               
+    70                                               	// crit register logic block
+    71              1                         60     	always @(posedge clk) begin
+    72                                               		if (!rst_n) begin
+    73              1                          1                 crit <= 1 - radius;
+    74                                                       end else if (update_crit) begin
+    75              1                         29                 crit <= next_crit;
+    76                                               		end
+    77                                               	end
+    78                                               
+    79                                                   // STATE MACHINE OUTPUT LOGIC BLOCK
+    80              1                        326     	always_comb begin
+    81                                               		case (curr_state)
+    82                                               			CIRCLE_WAIT: begin
+    83              1                          4     				done = 0;
+    84              1                          4     				vga_plot = 0;
+    85              1                          4     				vga_x_logic = 0;
+    86              1                          4     				vga_y_logic = 0;
+    87              1                          4     				update_offset_x = 0;
+    88              1                          4     				update_offset_y = 0;
+    89              1                          4     				update_crit = 0;
+    90              1                          4     				which_crit = 0;
+    91                                               				if (start) begin
+    92              1                          1     					next_state = CIRCLE_CHECK_LOOP;
+    93                                               				end else begin
+    94              1                          3     					next_state = CIRCLE_WAIT;
+    95                                               				end
+    96                                               			end
+    97                                               			CIRCLE_CHECK_LOOP: begin
+    98              1                         30     				done = 0;
+    99              1                         30     				vga_plot = 0;
+    100             1                         30     				vga_x_logic = 0;
+    101             1                         30     				vga_y_logic = 0;
+    102             1                         30     				update_offset_x = 0;
+    103             1                         30     				update_offset_y = 0;
+    104             1                         30     				update_crit = 0;
+    105             1                         30     				which_crit = 0;
+    106                                              				if (offset_y <= offset_x) begin
+    107             1                         29     					next_state = CIRCLE_DRAW_PIXEL1;
+    108                                              				end else begin
+    109             1                          1     					next_state = CIRCLE_DRAW_DONE;
+    110                                              				end
+    111                                              			end
+    112                                              			CIRCLE_DRAW_PIXEL1: begin
+    113             1                         29     				done = 0;
+    114             1                         29     				update_offset_x = 0;
+    115             1                         29     				update_offset_y = 0;
+    116             1                         29     				update_crit = 0;
+    117             1                         29     				which_crit = 0;
+    118                                              
+    119             1                         29     				vga_x_logic = centre_x + offset_x;
+    120             1                         29     				vga_y_logic = centre_y + offset_y;
+    121             1                         29     				next_state = CIRCLE_DRAW_PIXEL2;
+    122                                              				
+    123                                              				// plot only if it is within bounds
+    124                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    125             1                         29     					vga_plot = 1;
+    126                                              				end else begin
+    127             1                    ***0***     					vga_plot = 0;
+    128                                              				end
+    129                                              			end
+    130                                              			CIRCLE_DRAW_PIXEL2: begin
+    131             1                         29     				done = 0;
+    132             1                         29     				update_offset_x = 0;
+    133             1                         29     				update_offset_y = 0;
+    134             1                         29     				update_crit = 0;
+    135             1                         29     				which_crit = 0;
+    136                                              
+    137             1                         29     				vga_x_logic = centre_x + offset_y;
+    138             1                         29     				vga_y_logic = centre_y + offset_x;
+    139             1                         29     				next_state = CIRCLE_DRAW_PIXEL3;
+    140                                              				
+    141                                              				// plot only if it is within bounds
+    142                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    143             1                         29     					vga_plot = 1;
+    144                                              				end else begin
+    145             1                    ***0***     					vga_plot = 0;
+    146                                              				end
+    147                                              			end
+    148                                              			CIRCLE_DRAW_PIXEL3: begin
+    149             1                         29     				done = 0;
+    150             1                         29     				update_offset_x = 0;
+    151             1                         29     				update_offset_y = 0;
+    152             1                         29     				update_crit = 0;
+    153             1                         29     				which_crit = 0;
+    154                                              
+    155             1                         29     				vga_x_logic = centre_x - offset_x;
+    156             1                         29     				vga_y_logic = centre_y + offset_y;
+    157             1                         29     				next_state = CIRCLE_DRAW_PIXEL4;
+    158                                              				
+    159                                              				// plot only if it is within bounds
+    160                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    161             1                          2     					vga_plot = 1;
+    162                                              				end else begin
+    163             1                         27     					vga_plot = 0;
+    164                                              				end
+    165                                              			end
+    166                                              			CIRCLE_DRAW_PIXEL4: begin
+    167             1                         29     				done = 0;
+    168             1                         29     				update_offset_x = 0;
+    169             1                         29     				update_offset_y = 0;
+    170             1                         29     				update_crit = 0;
+    171             1                         29     				which_crit = 0;
+    172                                              				
+    173             1                         29     				vga_x_logic = centre_x - offset_y;
+    174             1                         29     				vga_y_logic = centre_y + offset_x;
+    175             1                         29     				next_state = CIRCLE_DRAW_PIXEL5;
+    176                                              				
+    177                                              				// plot only if it is within bounds
+    178                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    179             1                         29     					vga_plot = 1;
+    180                                              				end else begin
+    181             1                    ***0***     					vga_plot = 0;
+    182                                              				end
+    183                                              			end
+    184                                              			CIRCLE_DRAW_PIXEL5: begin
+    185             1                         29     				done = 0;
+    186             1                         29     				update_offset_x = 0;
+    187             1                         29     				update_offset_y = 0;
+    188             1                         29     				update_crit = 0;
+    189             1                         29     				which_crit = 0;
+    190                                              				
+    191             1                         29     				vga_x_logic = centre_x - offset_x;
+    192             1                         29     				vga_y_logic = centre_y - offset_y;
+    193             1                         29     				next_state = CIRCLE_DRAW_PIXEL6;
+    194                                              				
+    195                                              				// plot only if it is within bounds
+    196                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    197             1                          2     					vga_plot = 1;
+    198                                              				end else begin
+    199             1                         27     					vga_plot = 0;
+    200                                              				end
+    201                                              			end
+    202                                              			CIRCLE_DRAW_PIXEL6: begin
+    203             1                         29     				done = 0;
+    204             1                         29     				update_offset_x = 0;
+    205             1                         29     				update_offset_y = 0;
+    206             1                         29     				update_crit = 0;
+    207             1                         29     				which_crit = 0;
+    208                                              				
+    209             1                         29     				vga_x_logic = centre_x - offset_y;
+    210             1                         29     				vga_y_logic = centre_y - offset_x;
+    211             1                         29     				next_state = CIRCLE_DRAW_PIXEL7;
+    212                                              				
+    213                                              				// plot only if it is within bounds
+    214                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    215             1                         29     					vga_plot = 1;
+    216                                              				end else begin
+    217             1                    ***0***     					vga_plot = 0;
+    218                                              				end
+    219                                              			end
+    220                                              			CIRCLE_DRAW_PIXEL7: begin
+    221             1                         29     				done = 0;
+    222             1                         29     				update_offset_x = 0;
+    223             1                         29     				update_offset_y = 0;
+    224             1                         29     				update_crit = 0;
+    225             1                         29     				which_crit = 0;
+    226                                              				
+    227             1                         29     				vga_x_logic = centre_x + offset_x;
+    228             1                         29     				vga_y_logic = centre_y - offset_y;
+    229             1                         29     				next_state = CIRCLE_DRAW_PIXEL8;
+    230                                              				
+    231                                              				// plot only if it is within bounds
+    232                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    233             1                         29     					vga_plot = 1;
+    234                                              				end else begin
+    235             1                    ***0***     					vga_plot = 0;
+    236                                              				end
+    237                                              			end
+    238                                              			CIRCLE_DRAW_PIXEL8: begin
+    239             1                         29     				done = 0;
+    240             1                         29     				update_offset_x = 0;
+    241             1                         29     				update_offset_y = 0;
+    242             1                         29     				update_crit = 0;
+    243             1                         29     				which_crit = 0;
+    244                                              				
+    245             1                         29     				vga_x_logic = centre_x + offset_y;
+    246             1                         29     				vga_y_logic = centre_y - offset_x;
+    247             1                         29     				next_state = CIRCLE_CRIT_CHECK;
+    248                                              				
+    249                                              				// plot only if it is within bounds
+    250                                              				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    251             1                         29     					vga_plot = 1;
+    252                                              				end else begin
+    253             1                    ***0***     					vga_plot = 0;
+    254                                              				end
+    255                                              			end
+    256                                              			CIRCLE_CRIT_CHECK: begin
+    257             1                         29     				vga_plot = 0;
+    258             1                         29     				done = 0;
+    259             1                         29     				vga_x_logic = 0;
+    260             1                         29     				vga_y_logic = 0;
+    261             1                         29     				update_offset_x = 0;
+    262             1                         29     				update_offset_y = 1;
+    263             1                         29     				update_crit = 0;
+    264             1                         29     				which_crit = 0;
+    265                                              
+    266                                              				if (crit <= 0) begin
+    267             1                         17     					next_state = CIRCLE_CRIT_LE_ZERO;
+    268                                              				end else begin
+    269             1                         12                 		next_state = CIRCLE_CRIT_GT_ZERO;
+    270                                              				end
+    271                                              			end
+    272                                              			CIRCLE_CRIT_LE_ZERO: begin
+    273             1                         17     				vga_plot = 0;
+    274             1                         17     				done = 0;
+    275             1                         17     				vga_x_logic = 0;
+    276             1                         17     				vga_y_logic = 0;
+    277             1                         17     				update_offset_x = 0;
+    278             1                         17     				update_offset_y = 0;
+    279             1                         17     				update_crit = 1;
+    280             1                         17     				which_crit = 0;
+    281                                              
+    282             1                         17     				next_state <= CIRCLE_CHECK_LOOP;
+    283                                              			end
+    284                                              			CIRCLE_CRIT_GT_ZERO: begin
+    285             1                         12     				vga_plot = 0;
+    286             1                         12     				done = 0;
+    287             1                         12     				vga_x_logic = 0;
+    288             1                         12     				vga_y_logic = 0;
+    289             1                         12     				update_offset_x = 1;
+    290             1                         12     				update_offset_y = 0;
+    291             1                         12     				update_crit = 1;
+    292             1                         12     				which_crit = 1;
+    293             1                         12     				next_state <= CIRCLE_CHECK_LOOP;
+    294                                              			end
+    295                                              			CIRCLE_DRAW_DONE: begin
+    296             1                          2     				done = 1;
+    297             1                          2     				vga_plot = 0;
+    298             1                          2     				vga_x_logic = 0;
+    299             1                          2     				vga_y_logic = 0;
+    300             1                          2     				update_offset_x = 0;
+    301             1                          2     				update_offset_y = 0;
+    302             1                          2     				update_crit = 0;
+    303             1                          2     				which_crit = 0;
+    304                                              				if (start) begin
+    305             1                          1     					next_state = CIRCLE_DRAW_DONE;
+    306                                              				end else begin
+    307             1                          1     					next_state = CIRCLE_WAIT;
+    308                                              				end
+    309                                              			end
+    310                                              			default begin
+    311                                              				//panic
+    312             1                    ***0***     				done = 0;
+    313             1                    ***0***     				vga_plot = 0;
+    314             1                    ***0***     				vga_x_logic = 119;
+    315             1                    ***0***     				vga_y_logic = 159;
+    316             1                    ***0***     				update_offset_x = 0;
+    317             1                    ***0***     				update_offset_y = 0;
+    318             1                    ***0***     				update_crit = 0;
+    319             1                    ***0***     				which_crit = 0;
+    320             1                    ***0***     				next_state = CIRCLE_WAIT;
+    321                                              			end
+    322                                              		endcase
+    323                                              
+    324             1                        326     		vga_colour = colour;
+    325             1                        326     		vga_x = vga_x_logic[7:0];
+    326             1                        326             vga_y = vga_y_logic[6:0];
+    327             1                        326     		next_crit = which_crit ? crit + (2 * (offset_y - offset_x)) + 1 : crit + (2 * offset_y) + 1;
+    328                                              	end
+    329                                              	 
+    330                                              endmodule
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                        52        45         7     86.53
+
+================================Branch Details================================
+
+Branch Coverage for file circle.sv --
+
+------------------------------------IF Branch------------------------------------
+    43                                       324     Count coming in to IF
+    43              1                          1     		if(!rst_n) begin
+    45              1                        323     		end	else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    52                                        26     Count coming in to IF
+    52              1                          1     		if (!rst_n) begin
+    55              1                         12             else if (update_offset_x) begin
+                                              13     All False Count
+Branch totals: 3 hits of 3 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    62                                        60     Count coming in to IF
+    62              1                          1     		if (!rst_n) begin
+    65              1                         29             else if (update_offset_y) begin
+                                              30     All False Count
+Branch totals: 3 hits of 3 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    72                                        60     Count coming in to IF
+    72              1                          1     		if (!rst_n) begin
+    74              1                         29             end else if (update_crit) begin
+                                              30     All False Count
+Branch totals: 3 hits of 3 branches = 100.00%
+
+------------------------------------CASE Branch------------------------------------
+    81                                       326     Count coming in to CASE
+    82              1                          4     			CIRCLE_WAIT: begin
+    97              1                         30     			CIRCLE_CHECK_LOOP: begin
+    112             1                         29     			CIRCLE_DRAW_PIXEL1: begin
+    130             1                         29     			CIRCLE_DRAW_PIXEL2: begin
+    148             1                         29     			CIRCLE_DRAW_PIXEL3: begin
+    166             1                         29     			CIRCLE_DRAW_PIXEL4: begin
+    184             1                         29     			CIRCLE_DRAW_PIXEL5: begin
+    202             1                         29     			CIRCLE_DRAW_PIXEL6: begin
+    220             1                         29     			CIRCLE_DRAW_PIXEL7: begin
+    238             1                         29     			CIRCLE_DRAW_PIXEL8: begin
+    256             1                         29     			CIRCLE_CRIT_CHECK: begin
+    272             1                         17     			CIRCLE_CRIT_LE_ZERO: begin
+    284             1                         12     			CIRCLE_CRIT_GT_ZERO: begin
+    295             1                          2     			CIRCLE_DRAW_DONE: begin
+    310             1                    ***0***     			default begin
+Branch totals: 14 hits of 15 branches = 93.33%
+
+------------------------------------IF Branch------------------------------------
+    91                                         4     Count coming in to IF
+    91              1                          1     				if (start) begin
+    93              1                          3     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    106                                       30     Count coming in to IF
+    106             1                         29     				if (offset_y <= offset_x) begin
+    108             1                          1     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    124                                       29     Count coming in to IF
+    124             1                         29     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    126             1                    ***0***     				end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    142                                       29     Count coming in to IF
+    142             1                         29     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    144             1                    ***0***     				end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    160                                       29     Count coming in to IF
+    160             1                          2     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    162             1                         27     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    178                                       29     Count coming in to IF
+    178             1                         29     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    180             1                    ***0***     				end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    196                                       29     Count coming in to IF
+    196             1                          2     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    198             1                         27     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    214                                       29     Count coming in to IF
+    214             1                         29     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    216             1                    ***0***     				end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    232                                       29     Count coming in to IF
+    232             1                         29     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    234             1                    ***0***     				end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    250                                       29     Count coming in to IF
+    250             1                         29     				if (vga_x_logic <= 159 && vga_y_logic <= 119) begin
+    252             1                    ***0***     				end else begin
+Branch totals: 1 hit of 2 branches = 50.00%
+
+------------------------------------IF Branch------------------------------------
+    266                                       29     Count coming in to IF
+    266             1                         17     				if (crit <= 0) begin
+    268             1                         12     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    304                                        2     Count coming in to IF
+    304             1                          1     				if (start) begin
+    306             1                          1     				end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    327                                      326     Count coming in to IF
+    327             1                         12     		next_crit = which_crit ? crit + (2 * (offset_y - offset_x)) + 1 : crit + (2 * offset_y) + 1;
+    327             2                        314     		next_crit = which_crit ? crit + (2 * (offset_y - offset_x)) + 1 : crit + (2 * offset_y) + 1;
+Branch totals: 2 hits of 2 branches = 100.00%
+
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                    272       253        19     93.01
+
+================================Toggle Details================================
+
+Toggle Coverage for File circle.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+          5                          vga_colour[2]           0           0                                0.00 
+          5                          vga_colour[1]           0           0                                0.00 
+          5                          vga_colour[0]           0           0                                0.00 
+         25                             curr_state               ENUM type       Value       Count 
+         26                             next_state               ENUM type       Value       Count 
+         28                            offset_x[7]           0           0                                0.00 
+         28                            offset_x[6]           0           0                                0.00 
+         28                            offset_x[5]           1           0                               50.00 
+         28                            offset_x[4]           0           1                               50.00 
+         29                            offset_y[6]           0           0                                0.00 
+         29                            offset_y[5]           0           0                                0.00 
+         29                            offset_y[4]           0           1                               50.00 
+         34                         vga_y_logic[7]           0           0                                0.00 
+
+Total Node Count     =        150 
+Toggled Node Count   =        139 
+Untoggled Node Count =         11 
+
+Toggle Coverage      =      93.01% (253 of 272 bins)
+
+=================================================================================
+=== File: fillscreen.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           11        11         0    100.00
+
+================================Statement Details================================
+
+Statement Coverage for file fillscreen.sv --
+
+    1                                                module fillscreen(input logic clk, input logic rst_n, input logic [2:0] colour,
+    2                                                                  input logic start, output logic done,
+    3                                                                  output logic [7:0] vga_x, output logic [6:0] vga_y,
+    4                                                                  output logic [2:0] vga_colour, output logic vga_plot);
+    5                                                     // from task2, but we fill the screen with all black instead
+    6                                                	 logic [7:0] count_x;
+    7                                                	 logic [6:0] count_y;
+    8                                                	 
+    9                                                	 assign vga_x = count_x;
+    10                                               	 assign vga_y = count_y;
+    11                                               	 
+    12              1                      19204     	 always @(posedge clk)begin
+    13                                               		if(!rst_n)
+    14                                               			begin
+    15              1                          1     				count_x <= 8'b11111111;
+    16              1                          1     				count_y <= 7'b0000000;
+    17              1                          1     				done <= 1'b0;
+    18              1                          1     				vga_colour <= 3'b000;
+    19                                               			end
+    20                                               		else if( count_x == 8'd159 && count_y == 7'd119 )
+    21              1                          3     			done <= 1'b1;
+    22                                               			
+    23                                               		else if( start == 1'b1 && done == 1'b0)
+    24                                               			begin
+    25              1                      19200     				count_x <= count_x + 1'b1;
+    26              1                      19200     				vga_colour <= 3'b000;
+    27                                               				if (count_x == 8'd159) begin
+    28              1                        119     					count_x <= 0;
+    29              1                        119     					count_y <= count_y + 3'b001;
+    30                                               				end
+    31              1                      19200     				vga_plot <= 1'b1;
+    32                                               			end		
+    33                                               	 end
+    34                                               	 
+    35                                               endmodule
+    36                                               
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                         6         5         1     83.33
+
+================================Branch Details================================
+
+Branch Coverage for file fillscreen.sv --
+
+------------------------------------IF Branch------------------------------------
+    13                                     19204     Count coming in to IF
+    13              1                          1     		if(!rst_n)
+    20              1                          3     		else if( count_x == 8'd159 && count_y == 7'd119 )
+    23              1                      19200     		else if( start == 1'b1 && done == 1'b0)
+                                         ***0***     All False Count
+Branch totals: 3 hits of 4 branches = 75.00%
+
+------------------------------------IF Branch------------------------------------
+    27                                     19200     Count coming in to IF
+    27              1                        119     				if (count_x == 8'd159) begin
+                                           19081     All False Count
+Branch totals: 2 hits of 2 branches = 100.00%
+
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                     70        59        11     84.28
+
+================================Toggle Details================================
+
+Toggle Coverage for File fillscreen.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+          2                                   done           0           1                               50.00 
+          3                               vga_y[6]           0           1                               50.00 
+          4                               vga_plot           0           0                                0.00 
+          4                          vga_colour[2]           0           0                                0.00 
+          4                          vga_colour[1]           0           0                                0.00 
+          4                          vga_colour[0]           0           0                                0.00 
+          7                             count_y[6]           0           1                               50.00 
+
+Total Node Count     =         35 
+Toggled Node Count   =         28 
+Untoggled Node Count =          7 
+
+Toggle Coverage      =      84.28% (59 of 70 bins)
+
+=================================================================================
+=== File: task3.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           42        36         6     85.71
+
+================================Statement Details================================
+
+Statement Coverage for file task3.sv --
+
+    1                                                `timescale 1ps/1ps
+    2                                                module task3(input logic CLOCK_50, input logic [3:0] KEY,
+    3                                                             input logic [9:0] SW, output logic [9:0] LEDR,
+    4                                                             output logic [6:0] HEX0, output logic [6:0] HEX1, output logic [6:0] HEX2,
+    5                                                             output logic [6:0] HEX3, output logic [6:0] HEX4, output logic [6:0] HEX5,
+    6                                                             output logic [7:0] VGA_R, output logic [7:0] VGA_G, output logic [7:0] VGA_B,
+    7                                                             output logic VGA_HS, output logic VGA_VS, output logic VGA_CLK,
+    8                                                             output logic [7:0] VGA_X, output logic [6:0] VGA_Y,
+    9                                                             output logic [2:0] VGA_COLOUR, output logic VGA_PLOT);
+    10                                                   typedef enum {START_FILLSCREEN, WAIT_FILLSCREEN, START_CIRCLE, WAIT_CIRCLE, DONE} state_t;
+    11                                               
+    12                                                   state_t curr_state;
+    13                                                   state_t next_state;
+    14                                               
+    15                                                   logic start_fillscreen, start_circle;
+    16                                                   logic [2:0] vga_colour_fillscreen, vga_colour_circle;
+    17                                                   logic done_fillscreen, done_circle;
+    18                                                   logic plot_fillscreen, plot_circle;
+    19                                                   logic [7:0] vga_x_fillscreen, vga_x_circle;
+    20                                                   logic [6:0] vga_y_fillscreen, vga_y_circle;
+    21                                               
+    22                                               
+    23                                               	vga_adapter VGA(
+    24                                               				.resetn (KEY[3]), 
+    25                                               				.clock (CLOCK_50), 
+    26                                               				.colour (VGA_COLOUR),
+    27                                               				.x (VGA_X), 
+    28                                               				.y (VGA_Y), 
+    29                                               				.plot (VGA_PLOT),
+    30                                               				.VGA_R ( VGA_R ), 
+    31                                               				.VGA_G ( VGA_B ), 
+    32                                               				.VGA_B ( VGA_G ),
+    33                                               				.*);
+    34                                               	logic VGA_SYNC;
+    35                                               	logic VGA_BLANK;
+    36                                               	defparam VGA.RESOLUTION = "160x120";
+    37                                               	defparam VGA.MONOCHROME = "FALSE";
+    38                                               	
+    39                                               
+    40                                               	fillscreen FS_BLACK(.clk (CLOCK_50), 
+    41                                               					.rst_n (KEY[3]), 
+    42                                               					.colour (3'b000), //colour does not matter here, module will fill it with all black no matter what
+    43                                                                 	.start (start_fillscreen), 
+    44                                               					.done  (done_fillscreen),
+    45                                                                   .vga_x (vga_x_fillscreen), 
+    46                                               					.vga_y (vga_y_fillscreen), 
+    47                                                                   .vga_colour (vga_colour_fillscreen), 
+    48                                               					.vga_plot (plot_fillscreen)
+    49                                               					);
+    50                                               
+    51                                                   //Draw green circle at x=80 y=60 with radius of 40
+    52                                                   circle CIRCLE_INSTANCE(.clk(CLOCK_50), .rst_n(KEY[3]), .colour(3'b010),
+    53                                                            .centre_x(8'd30), .centre_y(7'd60), .radius(8'd40),
+    54                                                            .start(start_circle), .done(done_circle),
+    55                                                            .vga_x(vga_x_circle), .vga_y(vga_y_circle),
+    56                                                            .vga_colour(vga_colour_circle), .vga_plot(plot_circle));
+    57                                               
+    58              1                          5         always @(posedge CLOCK_50) begin
+    59                                               		if(!KEY[3]) begin
+    60              1                          1     			curr_state <= START_FILLSCREEN;
+    61                                               		end	else begin
+    62              1                          4     			curr_state <= next_state;
+    63                                               		end
+    64                                               	end
+    65                                               
+    66              1                      19470         always_comb begin
+    67                                                       case (curr_state)
+    68                                                           START_FILLSCREEN: begin
+    69              1                          3                     {start_fillscreen, start_circle} = 2'b10;
+    70              1                          3                     VGA_COLOUR = vga_colour_fillscreen;
+    71              1                          3                     VGA_PLOT = plot_fillscreen;
+    72              1                          3                     VGA_X = vga_x_fillscreen;
+    73              1                          3                     VGA_Y = vga_y_fillscreen;
+    74              1                          3                     next_state = WAIT_FILLSCREEN;
+    75                                                           end
+    76                                                           WAIT_FILLSCREEN: begin
+    77              1                      19201                     {start_fillscreen, start_circle} = 2'b10;
+    78              1                      19201                     VGA_COLOUR = vga_colour_fillscreen;
+    79              1                      19201                     VGA_PLOT = plot_fillscreen;
+    80              1                      19201                     VGA_X = vga_x_fillscreen;
+    81              1                      19201                     VGA_Y = vga_y_fillscreen;
+    82                                                               if (done_fillscreen) begin
+    83              1                          1                         next_state = START_CIRCLE;
+    84                                                               end else begin
+    85              1                      19200                         next_state = WAIT_FILLSCREEN;
+    86                                                               end
+    87                                                           end
+    88                                                           START_CIRCLE: begin
+    89              1                          1                     {start_fillscreen, start_circle} = 2'b01;
+    90              1                          1                     VGA_COLOUR = vga_colour_circle;
+    91              1                          1                     VGA_PLOT = plot_circle;
+    92              1                          1                     VGA_X = vga_x_circle;
+    93              1                          1                     VGA_Y = vga_y_circle;
+    94              1                          1                     next_state = WAIT_CIRCLE;
+    95                                                           end
+    96                                                           WAIT_CIRCLE: begin
+    97              1                        263                     {start_fillscreen, start_circle} = 2'b01;
+    98              1                        263                     VGA_COLOUR = vga_colour_circle;
+    99              1                        263                     VGA_PLOT = plot_circle;
+    100             1                        263                     VGA_X = vga_x_circle;
+    101             1                        263                     VGA_Y = vga_y_circle;
+    102                                                              if (done_circle) begin
+    103             1                          1                         next_state = DONE;
+    104                                                              end else begin
+    105             1                        262                         next_state = WAIT_CIRCLE;
+    106                                                              end
+    107                                                          end
+    108                                                          DONE: begin
+    109             1                          2                     VGA_PLOT = plot_circle;
+    110             1                          2                     VGA_COLOUR = vga_colour_circle;
+    111             1                          2                     VGA_X = vga_x_circle;
+    112             1                          2                     VGA_Y = vga_y_circle;
+    113             1                          2                     {start_fillscreen, start_circle} = 2'b00;
+    114             1                          2                     next_state = DONE;
+    115                                                          end
+    116                                              
+    117                                                          default: begin
+    118                                                              //panic, should not happen, we just deassert both starts and loop in DONE
+    119             1                    ***0***                     VGA_PLOT = plot_circle;
+    120             1                    ***0***                     VGA_COLOUR = vga_colour_circle;
+    121             1                    ***0***                     VGA_X = vga_x_circle;
+    122             1                    ***0***                     VGA_Y = vga_y_circle;
+    123             1                    ***0***                     {start_fillscreen, start_circle} = 2'b00;
+    124             1                    ***0***                     next_state = DONE;
+    125                                                          end
+    126                                              
+    127                                                      endcase
+    128                                              
+    129                                                  end
+    130                                              
+    131                                              endmodule: task3
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                        12        11         1     91.66
+
+================================Branch Details================================
+
+Branch Coverage for file task3.sv --
+
+------------------------------------IF Branch------------------------------------
+    59                                         5     Count coming in to IF
+    59              1                          1     		if(!KEY[3]) begin
+    61              1                          4     		end	else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------CASE Branch------------------------------------
+    67                                     19470     Count coming in to CASE
+    68              1                          3                 START_FILLSCREEN: begin
+    76              1                      19201                 WAIT_FILLSCREEN: begin
+    88              1                          1                 START_CIRCLE: begin
+    96              1                        263                 WAIT_CIRCLE: begin
+    108             1                          2                 DONE: begin
+    117             1                    ***0***                 default: begin
+Branch totals: 5 hits of 6 branches = 83.33%
+
+------------------------------------IF Branch------------------------------------
+    82                                     19201     Count coming in to IF
+    82              1                          1                     if (done_fillscreen) begin
+    84              1                      19200                     end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    102                                      263     Count coming in to IF
+    102             1                          1                     if (done_circle) begin
+    104             1                        262                     end else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                    190       109        81     57.36
+
+================================Toggle Details================================
+
+Toggle Coverage for File task3.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+          6                               VGA_R[7]           0           0                                0.00 
+          6                               VGA_R[6]           0           0                                0.00 
+          6                               VGA_R[5]           0           0                                0.00 
+          6                               VGA_R[4]           0           0                                0.00 
+          6                               VGA_R[3]           0           0                                0.00 
+          6                               VGA_R[2]           0           0                                0.00 
+          6                               VGA_R[1]           0           0                                0.00 
+          6                               VGA_R[0]           0           0                                0.00 
+          6                               VGA_G[7]           0           0                                0.00 
+          6                               VGA_G[6]           0           0                                0.00 
+          6                               VGA_G[5]           0           0                                0.00 
+          6                               VGA_G[4]           0           0                                0.00 
+          6                               VGA_G[3]           0           0                                0.00 
+          6                               VGA_G[2]           0           0                                0.00 
+          6                               VGA_G[1]           0           0                                0.00 
+          6                               VGA_G[0]           0           0                                0.00 
+          6                               VGA_B[7]           0           0                                0.00 
+          6                               VGA_B[6]           0           0                                0.00 
+          6                               VGA_B[5]           0           0                                0.00 
+          6                               VGA_B[4]           0           0                                0.00 
+          6                               VGA_B[3]           0           0                                0.00 
+          6                               VGA_B[2]           0           0                                0.00 
+          6                               VGA_B[1]           0           0                                0.00 
+          6                               VGA_B[0]           0           0                                0.00 
+          7                                 VGA_VS           0           0                                0.00 
+          7                                 VGA_HS           0           0                                0.00 
+          7                                VGA_CLK           1           0                               50.00 
+          9                          VGA_COLOUR[2]           0           0                                0.00 
+          9                          VGA_COLOUR[1]           0           1                               50.00 
+          9                          VGA_COLOUR[0]           0           0                                0.00 
+         12                             curr_state               ENUM type       Value       Count 
+                                                          START_FILLSCREEN           0        0.00 
+         13                             next_state               ENUM type       Value       Count 
+                                                          START_FILLSCREEN           0        0.00 
+         15                       start_fillscreen           1           0                               50.00 
+         16               vga_colour_fillscreen[2]           0           0                                0.00 
+         16               vga_colour_fillscreen[1]           0           0                                0.00 
+         16               vga_colour_fillscreen[0]           0           0                                0.00 
+         16                   vga_colour_circle[2]           0           0                                0.00 
+         16                   vga_colour_circle[1]           0           0                                0.00 
+         16                   vga_colour_circle[0]           0           0                                0.00 
+         17                        done_fillscreen           0           1                               50.00 
+         18                        plot_fillscreen           0           0                                0.00 
+         20                    vga_y_fillscreen[6]           0           1                               50.00 
+         34                               VGA_SYNC           0           0                                0.00 
+         35                              VGA_BLANK           0           0                                0.00 
+
+Total Node Count     =        100 
+Toggled Node Count   =         56 
+Untoggled Node Count =         44 
+
+Toggle Coverage      =      57.36% (109 of 190 bins)
+
+=================================================================================
+=== File: tb_rtl_task3.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                            9         9         0    100.00
+
+================================Statement Details================================
+
+Statement Coverage for file tb_rtl_task3.sv --
+
+    1                                                `timescale 1ps/1ps
+    2                                                module tb_rtl_task3();
+    3                                                
+    4                                                // Your testbench goes here. Our toplevel will give up after 1,000,000 ticks.
+    5                                                
+    6                                                    logic CLOCK_50 = 0;
+    7                                                    logic [3:0] KEY;
+    8                                                    logic [9:0] SW;
+    9                                                    logic [9:0] LEDR;
+    10                                                   logic [6:0] HEX0;  
+    11                                                   logic [6:0] HEX1;  
+    12                                                   logic [6:0] HEX2;
+    13                                                   logic [6:0] HEX3;  
+    14                                                   logic [6:0] HEX4;  
+    15                                                   logic [6:0] HEX5;
+    16                                                   logic [7:0] VGA_R;  
+    17                                                   logic [7:0] VGA_G;  
+    18                                                   logic [7:0] VGA_B;
+    19                                                   logic VGA_HS;  
+    20                                                   logic VGA_VS;  
+    21                                                   logic VGA_CLK;
+    22                                                   logic [7:0] VGA_X;  
+    23                                                   logic [6:0] VGA_Y;
+    24                                                   logic [2:0] VGA_COLOUR;
+    25                                                   logic VGA_PLOT;
+    26                                               
+    27                                                   task3 dut( .*);
+    28                                               
+    29              1                    2051256         always #5 CLOCK_50 = ~CLOCK_50;  // Create clock with period=10
+    29              2                    2051255     
+    30                                               
+    31                                                   initial begin
+    32              1                          1             KEY[3] = 0;
+    33              1                          1             #10;
+    34              1                          1             KEY[3] = 1;
+    35              1                          1             wait(dut.done_fillscreen);
+    36              1                          1             $display("Time took to fill screen is %0t",$time); 
+    37              1                          1             wait(dut.done_circle);
+    38              1                          1             $display("Time took to draw circle is %0t", $time);
+    39                                                   end
+    40                                               
+    41                                               endmodule: tb_rtl_task3
+
+Toggle Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Toggle Bins                    206        37       169     17.96
+
+================================Toggle Details================================
+
+Toggle Coverage for File tb_rtl_task3.sv --
+
+       Line                                   Node      1H->0L      0L->1H                          "Coverage"
+--------------------------------------------------------------------------------------------------------------
+          7                                 KEY[3]           0           1                               50.00 
+          7                                 KEY[2]           0           0                                0.00 
+          7                                 KEY[1]           0           0                                0.00 
+          7                                 KEY[0]           0           0                                0.00 
+          9                                LEDR[9]           0           0                                0.00 
+          9                                LEDR[8]           0           0                                0.00 
+          9                                LEDR[7]           0           0                                0.00 
+          9                                LEDR[6]           0           0                                0.00 
+          9                                LEDR[5]           0           0                                0.00 
+          9                                LEDR[4]           0           0                                0.00 
+          9                                LEDR[3]           0           0                                0.00 
+          9                                LEDR[2]           0           0                                0.00 
+          9                                LEDR[1]           0           0                                0.00 
+          9                                LEDR[0]           0           0                                0.00 
+         10                                HEX0[6]           0           0                                0.00 
+         10                                HEX0[5]           0           0                                0.00 
+         10                                HEX0[4]           0           0                                0.00 
+         10                                HEX0[3]           0           0                                0.00 
+         10                                HEX0[2]           0           0                                0.00 
+         10                                HEX0[1]           0           0                                0.00 
+         10                                HEX0[0]           0           0                                0.00 
+         11                                HEX1[6]           0           0                                0.00 
+         11                                HEX1[5]           0           0                                0.00 
+         11                                HEX1[4]           0           0                                0.00 
+         11                                HEX1[3]           0           0                                0.00 
+         11                                HEX1[2]           0           0                                0.00 
+         11                                HEX1[1]           0           0                                0.00 
+         11                                HEX1[0]           0           0                                0.00 
+         12                                HEX2[6]           0           0                                0.00 
+         12                                HEX2[5]           0           0                                0.00 
+         12                                HEX2[4]           0           0                                0.00 
+         12                                HEX2[3]           0           0                                0.00 
+         12                                HEX2[2]           0           0                                0.00 
+         12                                HEX2[1]           0           0                                0.00 
+         12                                HEX2[0]           0           0                                0.00 
+         13                                HEX3[6]           0           0                                0.00 
+         13                                HEX3[5]           0           0                                0.00 
+         13                                HEX3[4]           0           0                                0.00 
+         13                                HEX3[3]           0           0                                0.00 
+         13                                HEX3[2]           0           0                                0.00 
+         13                                HEX3[1]           0           0                                0.00 
+         13                                HEX3[0]           0           0                                0.00 
+         14                                HEX4[6]           0           0                                0.00 
+         14                                HEX4[5]           0           0                                0.00 
+         14                                HEX4[4]           0           0                                0.00 
+         14                                HEX4[3]           0           0                                0.00 
+         14                                HEX4[2]           0           0                                0.00 
+         14                                HEX4[1]           0           0                                0.00 
+         14                                HEX4[0]           0           0                                0.00 
+         15                                HEX5[6]           0           0                                0.00 
+         15                                HEX5[5]           0           0                                0.00 
+         15                                HEX5[4]           0           0                                0.00 
+         15                                HEX5[3]           0           0                                0.00 
+         15                                HEX5[2]           0           0                                0.00 
+         15                                HEX5[1]           0           0                                0.00 
+         15                                HEX5[0]           0           0                                0.00 
+         16                               VGA_R[7]           0           0                                0.00 
+         16                               VGA_R[6]           0           0                                0.00 
+         16                               VGA_R[5]           0           0                                0.00 
+         16                               VGA_R[4]           0           0                                0.00 
+         16                               VGA_R[3]           0           0                                0.00 
+         16                               VGA_R[2]           0           0                                0.00 
+         16                               VGA_R[1]           0           0                                0.00 
+         16                               VGA_R[0]           0           0                                0.00 
+         17                               VGA_G[7]           0           0                                0.00 
+         17                               VGA_G[6]           0           0                                0.00 
+         17                               VGA_G[5]           0           0                                0.00 
+         17                               VGA_G[4]           0           0                                0.00 
+         17                               VGA_G[3]           0           0                                0.00 
+         17                               VGA_G[2]           0           0                                0.00 
+         17                               VGA_G[1]           0           0                                0.00 
+         17                               VGA_G[0]           0           0                                0.00 
+         18                               VGA_B[7]           0           0                                0.00 
+         18                               VGA_B[6]           0           0                                0.00 
+         18                               VGA_B[5]           0           0                                0.00 
+         18                               VGA_B[4]           0           0                                0.00 
+         18                               VGA_B[3]           0           0                                0.00 
+         18                               VGA_B[2]           0           0                                0.00 
+         18                               VGA_B[1]           0           0                                0.00 
+         18                               VGA_B[0]           0           0                                0.00 
+         19                                 VGA_HS           0           0                                0.00 
+         20                                 VGA_VS           0           0                                0.00 
+         21                                VGA_CLK           1           0                               50.00 
+         24                          VGA_COLOUR[2]           0           0                                0.00 
+         24                          VGA_COLOUR[1]           0           1                               50.00 
+         24                          VGA_COLOUR[0]           0           0                                0.00 
+
+Total Node Count     =        103 
+Toggled Node Count   =         17 
+Untoggled Node Count =         86 
+
+Toggle Coverage      =      17.96% (37 of 206 bins)
+
+
+Total Coverage By File (code coverage only, filtered view): 74.03%
+
